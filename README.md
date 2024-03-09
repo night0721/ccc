@@ -1,17 +1,13 @@
-# ggg
+# ccc
 
-`ggg` is a rewrite of fff in C aiming for [sucklessness](https://suckless.org/philosophy/) and speed.
+ccc is a rewrite of fff in C aiming for suckless and speed.
 
-## Installation
-
-### Dependencies
-
+## Dependencies
 - gcc
 - ncurses
-- optional: libsixel
+- libsixel
 
-### Bulding
-
+## Bulding
 ```
 $ make
 # make install
