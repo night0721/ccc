@@ -189,6 +189,7 @@ void show_file_content()
     if (file)
     {
         wclear(windows[1].window);
+        draw_border_title(windows[1].window, true);
         fseek(file, 0, SEEK_END);
         long length = ftell(file);
         fseek(file, 0, SEEK_SET);
