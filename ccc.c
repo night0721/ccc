@@ -6,6 +6,7 @@
 #include <dirent.h>         /* directories etc. */
 #include <ncurses.h>
 
+#include "file.h"
 #include "util.h"
 
 #define ESC 0x1B
@@ -17,18 +18,17 @@ typedef struct {
     int x;
 } WIN_STRUCT;
 
+
 /* functions' definitions */
 void list_cwd_files();
 void highlight_current_line();
 void show_file_content();
-long files_len();
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
 
 /* global variables */
 unsigned int focus = 0;
 int current_selection = 0;
-char **files;
 int halfx;
 WIN_STRUCT windows[2];
 
@@ -109,6 +109,9 @@ int main(int argc, char** argv)
     return 0;
 }
 
+/*
+ * read current directory and list all files to window 0
+ */
 void list_cwd_files()
 {
     char cwd[PATH_MAX];
@@ -121,23 +124,22 @@ void list_cwd_files()
     {
         int count = 0;
         while ((ep = readdir(dp)) != NULL) {
-            char *filename = strdup(ep->d_name);
+            char *filename = strdup(ep->d_name); // duplicate file name to char*
             if (!filename)
             {
+                // memory allocation failed
                 perror("ccc");
                 exit(EXIT_FAILURE);
             }
             // can't be strncmp as that filter out dotfiles
             if (strcmp(filename, ".") && strcmp(ep->d_name, ".."))
             {
-                files = rememalloc(files, (count + 1) * sizeof(char *));
-                files[count] = filename;
+                add_file(filename);
                 mvwprintw(windows[0].window, count + 1, 1, "%s", filename);
                 count++;
             }
         }
         closedir(dp);
-        files[count] = NULL;
         wrefresh(windows[0].window);
     }
     else {
@@ -145,6 +147,9 @@ void list_cwd_files()
     }
 }
 
+/*
+ * highlight current line by reversing the color
+ */
 void highlight_current_line()
 {
     for (int i = 0; i < files_len(); i++)
@@ -154,19 +159,22 @@ void highlight_current_line()
             wattron(windows[0].window, A_REVERSE);
             wattron(windows[0].window, COLOR_PAIR(1));
         }
-
-        mvwprintw(windows[0].window, i + 1, 1, "%s", files[i]);
+        
+        mvwprintw(windows[0].window, i + 1, 1, "%s", get_filename(i)); // print actual file name
         wattroff(windows[0].window, A_REVERSE);
         wattroff(windows[0].window, COLOR_PAIR(1));
     }
 
-    wrefresh(windows[0].window);
-    show_file_content();
+    wrefresh(windows[0].window); // refresh to see the changes
+    show_file_content(); // show file content every time cursor changes
 }
 
+/*
+ * get file content into buffer and show it to preview window
+ */
 void show_file_content()
 {
-    FILE *file = fopen(files[current_selection], "rb");
+    FILE *file = fopen(get_filename(current_selection), "rb");
     if (file)
     {
         fseek(file, 0, SEEK_END);
@@ -178,14 +186,6 @@ void show_file_content()
         mvwprintw(windows[1].window, 1, 1, "%s", buffer);
         wrefresh(windows[1].window);
     }
-}
-
-long files_len() {
-    long i = 0;
-    while (files[i] != NULL) {
-        i++;
-    }
-    return i;
 }
 
 void init_windows()
@@ -218,6 +218,7 @@ void init_windows()
  */
 void draw_border_title(WINDOW *window, bool active)
 {
+    // turn on color depends on active
     if (active) {
         wattron(window, COLOR_PAIR(2));
     } else {
@@ -236,6 +237,8 @@ void draw_border_title(WINDOW *window, bool active)
     mvwaddch(window, LINES - 1, 0, ACS_LLCORNER); // lower left corner
     mvwhline(window, LINES - 1, 1, ACS_HLINE, halfx - 2); // bottom horizontal line
     mvwaddch(window, LINES - 1, halfx - 1, ACS_LRCORNER); // lower right corner
+
+    // turn color off after turning it on
     if (active) {
         wattroff(window, COLOR_PAIR(2));
     } else {
