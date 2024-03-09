@@ -99,6 +99,10 @@ int main(int argc, char** argv)
                 }
                 highlight_current_line();
                 break;
+            case 'G':
+                current_selection = files_len() - 1;
+                highlight_current_line();
+                break;
             case 27: // esc
                 break;
             case KEY_RESIZE:
@@ -184,6 +188,8 @@ void show_file_content()
     FILE *file = fopen(get_filename((long) current_selection), "rb");
     if (file)
     {
+        wclear(windows[1].window);
+        draw_border_title(windows[1].window, true);
         fseek(file, 0, SEEK_END);
         long length = ftell(file);
         fseek(file, 0, SEEK_SET);
