@@ -2,7 +2,7 @@
 #define FILE_H_
 
 typedef struct file {
-    char *filename;
+    char *name;
     // put some more useful stat here
     struct file *next;
 } file;

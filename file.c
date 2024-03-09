@@ -4,7 +4,7 @@
 
 // files in a link list data structure
 typedef struct file {
-    char *filename;
+    char *name;
     // put some more useful stat here
     struct file *next;
 } file;
@@ -35,7 +35,7 @@ long add_file(char *filename)
     {
         perror("ccc");
     }
-    new_file->filename = buf;
+    new_file->name = buf;
     new_file->next = NULL;
     if (current == NULL)
     {
@@ -73,9 +73,14 @@ file *get_file(long index)
 char *get_filename(long index)
 {
     file *file = get_file(index);
-    if (!file)
+    if (file != NULL)
     {
-        return file->filename;
+        char *name = strdup(file->name);
+        if (!name)
+        {
+            perror("ccc");
+        }
+        return name;
     }
     else
     {

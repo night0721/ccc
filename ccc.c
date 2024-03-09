@@ -139,7 +139,7 @@ void list_cwd_files()
                 exit(EXIT_FAILURE); 
             }
             // can't be strncmp as that filter out dotfiles
-            if (strcmp(filename, ".") && strcmp(ep->d_name, ".."))
+            if (strcmp(filename, ".") && strcmp(filename, ".."))
             {
                 add_file(filename);
                 mvwprintw(windows[0].window, count + 1, 1, "%s", filename);
@@ -159,15 +159,15 @@ void list_cwd_files()
  */
 void highlight_current_line()
 {
-    for (int i = 0; i < files_len(); i++)
+    for (long i = 0; i < files_len(); i++)
     {
         if (i == current_selection)
         {
             wattron(windows[0].window, A_REVERSE);
             wattron(windows[0].window, COLOR_PAIR(1));
         }
-        
-        mvwprintw(windows[0].window, i + 1, 1, "%s", get_filename(i)); // print actual file name
+        char *name = get_filename(i);
+        mvwprintw(windows[0].window, i + 1, 1, "%s", name); // print actual file name
         wattroff(windows[0].window, A_REVERSE);
         wattroff(windows[0].window, COLOR_PAIR(1));
     }
@@ -181,7 +181,7 @@ void highlight_current_line()
  */
 void show_file_content()
 {
-    FILE *file = fopen(get_filename(current_selection), "rb");
+    FILE *file = fopen(get_filename((long) current_selection), "rb");
     if (file)
     {
         fseek(file, 0, SEEK_END);
