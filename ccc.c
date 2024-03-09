@@ -8,7 +8,7 @@
 
 #include "util.h"
 
-#define ESC 0x1B
+#define ESC 0x1B    /* \e or \033 */
 
 typedef struct {
     WINDOW *window;
@@ -29,14 +29,19 @@ void draw_border_title(WINDOW *window, bool active);
 unsigned int focus = 0;
 int current_selection = 0;
 char **files;
-int halfx;
+int half_width;
 WIN_STRUCT windows[2];
 
 int main(int argc, char** argv)
 {
+    char cwd[PATH_MAX];
+
     // check if it is interactive shell
     if (!isatty(STDIN_FILENO)) 
         die("ccc: No tty detected. ccc requires an interactive shell to run.\n");
+
+    /* set window name */
+    printf("%c]2;ccc: %s%c", ESC, getcwd(cwd, sizeof(cwd)), ESC);
 
     initscr();
     noecho();
@@ -56,7 +61,7 @@ int main(int argc, char** argv)
     init_pair(2, COLOR_CYAN, COLOR_BLACK);  // active color
 
     refresh();
-    halfx = COLS / 2;
+    half_width = COLS / 2;
     init_windows();
     list_cwd_files();
     highlight_current_line();
@@ -120,12 +125,14 @@ void list_cwd_files()
     if (dp != NULL)
     {
         int count = 0;
-        while ((ep = readdir(dp)) != NULL) {
+        while ((ep = readdir(dp)) != NULL)
+        {
             char *filename = strdup(ep->d_name);
             if (!filename)
             {
                 perror("ccc");
-                exit(EXIT_FAILURE);
+                fprintf(stderr, "ccc: Cannot read filename %s.", filename);
+                exit(EXIT_FAILURE); 
             }
             // can't be strncmp as that filter out dotfiles
             if (strcmp(filename, ".") && strcmp(ep->d_name, ".."))
@@ -201,8 +208,8 @@ void init_windows()
      */
     
     // create windows
-    WINDOW *directory = newwin(LINES, halfx, 0, 0);
-    WINDOW *preview = newwin(LINES, halfx, 0, halfx);
+    WINDOW *directory = newwin(LINES, half_width, 0, 0);
+    WINDOW *preview = newwin(LINES, half_width, 0, half_width);
     
     // draw border around windows
     draw_border_title(directory,    true);
@@ -210,11 +217,11 @@ void init_windows()
 
     /*                          window      location  y,     x    */
     windows[0] = (WIN_STRUCT) { directory,  0,        0,     0     };
-    windows[1] = (WIN_STRUCT) { preview,    1,        0,     halfx };
+    windows[1] = (WIN_STRUCT) { preview,    1,        0,     half_width };
 }
 
 /*
- * draw the border of the window depends on it is active or not
+ * Draw the border of the window depends on it is active or not
  */
 void draw_border_title(WINDOW *window, bool active)
 {
@@ -225,17 +232,17 @@ void draw_border_title(WINDOW *window, bool active)
     }
     // draw top border
     mvwaddch(window, 0, 0, ACS_ULCORNER);  // upper left corner
-    mvwhline(window, 0, 1, ACS_HLINE, halfx - 2); // top horizontal line
-    mvwaddch(window, 0, halfx - 1, ACS_URCORNER); // upper right corner
+    mvwhline(window, 0, 1, ACS_HLINE, half_width - 2); // top horizontal line
+    mvwaddch(window, 0, half_width - 1, ACS_URCORNER); // upper right corner
 
     // draw side border
     mvwvline(window, 1, 0, ACS_VLINE, LINES - 2); // left vertical line
-    mvwvline(window, 1, halfx - 1, ACS_VLINE, LINES - 2); // right vertical line
+    mvwvline(window, 1, half_width - 1, ACS_VLINE, LINES - 2); // right vertical line
 
     // draw bottom border
     mvwaddch(window, LINES - 1, 0, ACS_LLCORNER); // lower left corner
-    mvwhline(window, LINES - 1, 1, ACS_HLINE, halfx - 2); // bottom horizontal line
-    mvwaddch(window, LINES - 1, halfx - 1, ACS_LRCORNER); // lower right corner
+    mvwhline(window, LINES - 1, 1, ACS_HLINE, half_width - 2); // bottom horizontal line
+    mvwaddch(window, LINES - 1, half_width - 1, ACS_LRCORNER); // lower right corner
     if (active) {
         wattroff(window, COLOR_PAIR(2));
     } else {
