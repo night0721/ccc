@@ -1,13 +1,17 @@
 # ggg
 
-ggg is a rewrite of fff in C aiming for suckless and speed.
+`ggg` is a rewrite of fff in C aiming for [sucklessness](https://suckless.org/philosophy/) and speed.
 
-## Dependencies
+## Installation
+
+### Dependencies
+
 - gcc
 - ncurses
-- libsixel
+- optional: libsixel
 
-## Bulding
+### Bulding
+
 ```
 $ make
 # make install
