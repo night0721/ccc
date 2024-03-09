@@ -3,7 +3,7 @@
 
 TARGET = ccc
 MANPAGE = ccc.1
-SRC = ccc.c util.c
+SRC = ccc.c util.c file.c
 
 # Flags
 LDFLAGS = $(shell pkg-config --libs ncurses)

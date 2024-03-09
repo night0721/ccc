@@ -135,7 +135,7 @@ void list_cwd_files()
             {
                 // memory allocation failed
                 perror("ccc");
-                fprintf(stderr, "ccc: Cannot read filename %s.", filename);
+                fprintf(stderr, "ccc: Cannot read filename %s.", ep->d_name);
                 exit(EXIT_FAILURE); 
             }
             // can't be strncmp as that filter out dotfiles
