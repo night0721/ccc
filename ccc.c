@@ -3,10 +3,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <linux/limits.h>
-#include <dirent.h>
+#include <dirent.h>         /* directories etc. */
 #include <ncurses.h>
 
 #include "util.h"
+
+#define ESC 0x1B
 
 typedef struct {
     WINDOW *window;
@@ -15,6 +17,7 @@ typedef struct {
     int x;
 } WIN_STRUCT;
 
+/* functions' definitions */
 void list_cwd_files();
 void highlight_current_line();
 void show_file_content();
@@ -22,6 +25,7 @@ long files_len();
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
 
+/* global variables */
 unsigned int focus = 0;
 int current_selection = 0;
 char **files;
@@ -30,30 +34,33 @@ WIN_STRUCT windows[2];
 
 int main(int argc, char** argv)
 {
-    
     // check if it is interactive shell
     if (!isatty(STDIN_FILENO)) 
-    {
         die("ccc: No tty detected. ccc requires an interactive shell to run.\n");
-    }
+
     initscr();
     noecho();
     curs_set(0);
 
-    // check terminal have colors
+    // check terminal has colors
     if (!has_colors()) 
     {
         endwin();
         die("ccc: Color is not supported in your terminal.\n");
     }
-    start_color();
+    else {
+        start_color();
+    }
+
     init_pair(1, COLOR_BLUE, COLOR_BLACK);  // foreground, background
-    init_pair(2, COLOR_CYAN, COLOR_BLACK); // active color
+    init_pair(2, COLOR_CYAN, COLOR_BLACK);  // active color
+
     refresh();
     halfx = COLS / 2;
     init_windows();
     list_cwd_files();
     highlight_current_line();
+
     int ch;
     while (1)
     {
@@ -99,7 +106,6 @@ int main(int argc, char** argv)
         }
     }
     endwin(); // End curses
-    return EXIT_SUCCESS;
     return 0;
 }
 
@@ -109,6 +115,7 @@ void list_cwd_files()
     getcwd(cwd, sizeof(cwd));
     DIR *dp;
     struct dirent *ep;
+
     dp = opendir(cwd);
     if (dp != NULL)
     {
@@ -133,8 +140,7 @@ void list_cwd_files()
         files[count] = NULL;
         wrefresh(windows[0].window);
     }
-    else
-    {
+    else {
         perror("ccc");
     }
 }
@@ -148,10 +154,12 @@ void highlight_current_line()
             wattron(windows[0].window, A_REVERSE);
             wattron(windows[0].window, COLOR_PAIR(1));
         }
+
         mvwprintw(windows[0].window, i + 1, 1, "%s", files[i]);
         wattroff(windows[0].window, A_REVERSE);
         wattroff(windows[0].window, COLOR_PAIR(1));
     }
+
     wrefresh(windows[0].window);
     show_file_content();
 }
