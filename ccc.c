@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 {
     char cwd[PATH_MAX];
 
-    if (argc > 1 && strcmp(argv[2], "-h"))
+    if (argc > 1 && strcmp(argv[1], "-h") == 0)
         die("Usage: ccc filename");
 
     /* check if it is interactive shell */
