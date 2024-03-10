@@ -1,9 +1,8 @@
 # ccc
 
-`ccc` is a rewrite of [fff](https://github.com/piotr-marendowski/fff) in C aiming for [sucklessness](https://suckless.org/philosophy/) and speed.
+`ccc` is a rewrite of [fff](https://github.com/piotr-marendowski/fff) in C aiming for usefulness and speed.
 
 The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity. You may call it a `soft fork`.
-
 
 ## Features
 
