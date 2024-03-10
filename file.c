@@ -2,10 +2,10 @@
 
 #include "util.h"
 
-// files in a link list data structure
+/* files in a link list data structure */
 typedef struct file {
     char *name;
-    // put some more useful stat here
+    /* put some more useful stat here */
     struct file *next;
 } file;
 
@@ -18,8 +18,7 @@ long files_len()
 {
     file *current = files;
     int count = 0;
-    while (current != NULL)
-    {
+    while (current != NULL) {
         count++;
         current = current->next;
     }
@@ -31,20 +30,17 @@ long add_file(char *filename)
     file *current = files;
     file *new_file = memalloc(sizeof(file));
     char *buf = strdup(filename);
-    if (!buf)
-    {
+    if (!buf) {
         perror("ccc");
     }
     new_file->name = buf;
     new_file->next = NULL;
-    if (current == NULL)
-    {
+    if (current == NULL) {
         files = new_file;
         return 0;
     }
     long index = 1;
-    while (current->next != NULL)
-    {
+    while (current->next != NULL) {
         current = current->next;
         index++;
     }
@@ -55,16 +51,13 @@ long add_file(char *filename)
 file *get_file(long index)
 {
     file *current = files;
-    if (index == 0)
-    {
+    if (index == 0) {
         return current;
     }
-    if (index > files_len())
-    {
+    if (index > files_len()) {
         return NULL;
     }
-    for (long i = 0; i < index; i++)
-    {
+    for (long i = 0; i < index; i++) {
         current = current->next;
     }
     return current;
@@ -73,17 +66,13 @@ file *get_file(long index)
 char *get_filename(long index)
 {
     file *file = get_file(index);
-    if (file != NULL)
-    {
+    if (file != NULL) {
         char *name = strdup(file->name);
-        if (!name)
-        {
+        if (!name) {
             perror("ccc");
         }
         return name;
-    }
-    else
-    {
+    } else {
         return NULL;
     }
 }
