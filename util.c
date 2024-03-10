@@ -3,7 +3,7 @@
 
 void die(char *reason)
 {
-    fprintf(stderr, reason);
+    fprintf(stderr, "%s\n", reason);
     exit(EXIT_FAILURE);
 }
 
