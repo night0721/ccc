@@ -217,8 +217,8 @@ void show_file_content()
 
         fseek(file, 0, SEEK_END);
         /* check if file isn't empty */
-        if (ftell(file) != 0) {
-            long length = ftell(file);
+        long length = ftell(file);
+        if (length != 0) {
             fseek(file, 0, SEEK_SET);
 
             char *buffer = memalloc(length * sizeof(char));
@@ -250,7 +250,7 @@ void init_windows()
     WINDOW *panel =     newwin(PH,     COLS,        LINES - PH, 0         );
     
     /* draw border around windows     */
-    draw_border_title(directory, true );
+    draw_border_title(directory, true);
     draw_border_title(preview,   false);
 
     /*                          window      location  y,            x           */
