@@ -11,7 +11,7 @@ Consider this project incomplete and WIP!
 | Feature | Ported | Dropped | Added |
 |---------|:------:|:-------:|:-----:|
 | Standard movement | X | | |
-| Advanced movement (jumps) | | | |
+| Advanced movement (jumps) | X | | |
 | Searching | | | |
 | File preview | | | X |
 | Sorting | | | |

@@ -11,6 +11,7 @@
 
 #define ESC 0x1B    /* \e or \033 */
 #define PH 1        /* panel height */
+#define JUMP_NUM 14 /* how long ctrl + u/d jump are */
 
 typedef struct {
     WINDOW *window;
@@ -92,6 +93,15 @@ int main(int argc, char** argv)
                 if (focus == 0) focus++;
                 else if (focus == 1) focus--;
                 break;
+            /* jump up */
+            case '\x15':
+                if ((current_selection - JUMP_NUM) > 0)
+                    current_selection -= JUMP_NUM;
+                else
+                    current_selection = 0;
+
+                highlight_current_line();
+                break;
             /* go up */
             case 'k':
                 if (current_selection > 0)
@@ -99,16 +109,25 @@ int main(int argc, char** argv)
 
                 highlight_current_line();
                 break;
+            /* jump down */
+            case '\x04':
+                if ((current_selection + JUMP_NUM) < (files_len() - 1))
+                    current_selection += JUMP_NUM;
+                else
+                    current_selection = (files_len() - 1);
+
+                highlight_current_line();
+                break;
             /* go down */
             case 'j':
-                if (current_selection < files_len() - 1)
+                if (current_selection < (files_len() - 1))
                     current_selection++;
 
                 highlight_current_line();
                 break;
             /* jump to the bottom */
             case 'G':
-                current_selection = files_len() - 1;
+                current_selection = (files_len() - 1);
                 highlight_current_line();
                 break;
             /* jump to the top */
