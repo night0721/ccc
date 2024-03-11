@@ -4,6 +4,8 @@
 #include <string.h>
 #include <linux/limits.h>
 #include <dirent.h>         /* directories etc. */
+#include <sys/stat.h>
+#include <time.h>
 #include <ncurses.h>
 
 #include "file.h"
@@ -21,6 +23,7 @@ typedef struct {
 
 /* functions' definitions */
 void list_files(char *path);
+char *get_file_stat(char *filename);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
@@ -166,10 +169,15 @@ void list_files(char *path)
             }
             /* can't be strncmp as that would filter out the dotfiles */
             if (strcmp(filename, ".") && strcmp(filename, "..")) {
-                add_file(filename);
-                mvwprintw(windows[0].window, count + 1, 1, "%s", filename);
+                char *stats = get_file_stat(filename);
+                long index = add_file(filename, stats);
+                char *line = get_line(index);
+                mvwprintw(windows[0].window, count + 1, 1, "%s", line);
+                free(stats);
+                free(line);
                 count++;
             }
+            free(filename);
         }
         closedir(dp);
         wrefresh(windows[0].window);
@@ -179,12 +187,39 @@ void list_files(char *path)
 }
 
 /*
+ * Get file's last modified time and size
+ */
+char *get_file_stat(char *filename) {
+    struct stat file_stat;
+    stat(filename, &file_stat);
+
+    char *time = memalloc(20 * sizeof(char));
+    strftime(time, 20, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime)); /* format last modified time to a string */
+    
+    double bytes = file_stat.st_size;
+    char *size = memalloc(25 * sizeof(char)); /* max 25 chars due to long, space, suffix and nul */
+    int unit = 0;
+    const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
+    while (bytes > 1024) {
+        bytes /= 1024;
+        unit++;
+    }
+    sprintf(size, "%.*f%s", unit, bytes, units[unit]);
+    
+    char *total_stat = memalloc(45 * sizeof(char));
+    snprintf(total_stat, 45, "%-18s %-10s", time, size);
+
+    free(time);
+    free(size);
+    return total_stat;
+}
+
+/*
  * Highlight current line by reversing the color
  */
 void highlight_current_line()
 {
     char cwd[PATH_MAX];
-    char *filename;
 
     for (long i = 0; i < files_len(); i++) {
         if (i == current_selection) {
@@ -196,11 +231,13 @@ void highlight_current_line()
             wprintw(windows[3].window, "(%ld/%ld) %s", i + 1, files_len(),
                     getcwd(cwd, sizeof(cwd)));
         }
-        /* print the actual filename */
-        filename = get_filename(i);
-        mvwprintw(windows[0].window, i + 1, 1, "%s", filename);
+        /* print the actual filename and stats */
+        char *line = get_line(i);
+        mvwprintw(windows[0].window, i + 1, 1, "%s", line);
+
         wattroff(windows[0].window, A_REVERSE);
         wattroff(windows[0].window, COLOR_PAIR(1));
+        free(line);
     }
 
     wrefresh(windows[0].window);
@@ -228,6 +265,7 @@ void show_file_content()
             fread(buffer, 1, length, file);
             mvwprintw(windows[2].window, 0, 0, "%s", buffer);
             wrefresh(windows[2].window);
+            free(buffer);
         } else {
             wclear(windows[2].window);
         }
@@ -255,7 +293,7 @@ void edit_file() {
         system(command);
         reset_prog_mode(); /* return to previous tty mode */
         refresh(); /* store the screen contents */
-        //execle(editor, filename);
+        free(filename);
     }
 }
 
