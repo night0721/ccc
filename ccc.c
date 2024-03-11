@@ -23,6 +23,7 @@ typedef struct {
 void list_files(char *path);
 void highlight_current_line();
 void show_file_content();
+void edit_file();
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
 
@@ -30,7 +31,7 @@ void draw_border_title(WINDOW *window, bool active);
 unsigned int focus = 0;
 long current_selection = 0;
 int half_width;
-WIN_STRUCT windows[3];
+WIN_STRUCT windows[4];
 
 int main(int argc, char** argv)
 {
@@ -123,6 +124,9 @@ int main(int argc, char** argv)
                         break;
                 }
                 break;
+            case 'e':
+                edit_file();
+                break;
             case 27: /* esc */
                 break;
             case KEY_RESIZE:
@@ -188,8 +192,8 @@ void highlight_current_line()
             wattron(windows[0].window, COLOR_PAIR(1));
 
             /* update the panel */
-            wclear(windows[2].window);
-            wprintw(windows[2].window, "(%ld/%ld) %s", i + 1, files_len(),
+            wclear(windows[3].window);
+            wprintw(windows[3].window, "(%ld/%ld) %s", i + 1, files_len(),
                     getcwd(cwd, sizeof(cwd)));
         }
         /* print the actual filename */
@@ -200,7 +204,7 @@ void highlight_current_line()
     }
 
     wrefresh(windows[0].window);
-    wrefresh(windows[2].window);
+    wrefresh(windows[3].window);
     /* show file content every time cursor changes */
     show_file_content();
 }
@@ -212,51 +216,75 @@ void show_file_content()
 {
     FILE *file = fopen(get_filename((long) current_selection), "rb");
     if (file) {
-        wclear(windows[1].window);
+        wclear(windows[2].window);
         draw_border_title(windows[1].window, true);
 
         fseek(file, 0, SEEK_END);
-        /* check if file isn't empty */
         long length = ftell(file);
-        if (length != 0) {
-            fseek(file, 0, SEEK_SET);
-
+        /* check if file isn't empty */
+        if (length != 0 && length < 4096) {
+            fseek(file, 0, SEEK_SET); /* set cursor back to start of file */
             char *buffer = memalloc(length * sizeof(char));
             fread(buffer, 1, length, file);
-
-            mvwprintw(windows[1].window, 1, 1, "%s", buffer);
-            wrefresh(windows[1].window);
+            mvwprintw(windows[2].window, 0, 0, "%s", buffer);
+            wrefresh(windows[2].window);
         } else {
-            wclear(windows[1].window);
+            wclear(windows[2].window);
         }
         fclose(file);
     }
 }
 
+/*
+ * Opens $EDITOR to edit the file
+ */
+void edit_file() {
+    char *editor = getenv("EDITOR");
+    if (editor == NULL) {
+        wclear(windows[3].window);
+        wprintw(windows[3].window, "Cannot get EDITOR variable, is it defined?");
+        wrefresh(windows[3].window);
+        return;
+    } else {
+        def_prog_mode(); /* save the tty modes */
+        endwin(); /* end curses mode temporarily */
+        char *filename = get_filename(current_selection);
+        int length = strlen(editor) + strlen(filename) + 2; /* one for space one for nul */
+        char command[length];
+        snprintf(command, length, "%s %s", editor, filename);
+        system(command);
+        reset_prog_mode(); /* return to previous tty mode */
+        refresh(); /* store the screen contents */
+        //execle(editor, filename);
+    }
+}
+
 void init_windows()
 {
-    /*-----------------------------+
-    |               |              |
-    |               |              |
-    | directory (0) |  preview (1) |
-    |               |              |
-    |               |              |
-    |               |              |
-    +==========panel (2)==========*/
+    /*------------------------------+
+    |               ||-------------||
+    |               ||             ||
+    | directory (0) ||  preview (1)||
+    |               ||             ||
+    |               ||             ||
+    |               ||-------------||
+    +==========panel (2)===========*/
     
-    /*                         lines,  cols,        y,          x         */
-    WINDOW *directory = newwin(LINES,  half_width,  0,          0         );
-    WINDOW *preview =   newwin(LINES,  half_width,  0,          half_width);
-    WINDOW *panel =     newwin(PH,     COLS,        LINES - PH, 0         );
+    /*                                lines,          cols,           y,          x             */
+    WINDOW *directory =        newwin(LINES - PH,     half_width,     0,          0             );
+    WINDOW *preview_border =   newwin(LINES - PH,     half_width,     0,          half_width    );
+    WINDOW *preview_content =  newwin(LINES - PH - 2, half_width - 2, 1,          half_width + 1);
+    WINDOW *panel =            newwin(PH,             COLS,           LINES - PH, 0             );
     
     /* draw border around windows     */
     draw_border_title(directory, true);
-    draw_border_title(preview,   false);
+    draw_border_title(preview_content,   false);
 
-    /*                          window      location  y,            x           */
-    windows[0] = (WIN_STRUCT) { directory,  0,        0,            0           };
-    windows[1] = (WIN_STRUCT) { preview,    1,        0,            half_width  };
-    windows[2] = (WIN_STRUCT) { panel,      2,        LINES - PH,   0           };
+    /*                          window             location  y,            x           */
+    windows[0] = (WIN_STRUCT) { directory,         0,        0,            0              };
+    windows[1] = (WIN_STRUCT) { preview_border,    1,        0,            half_width     };
+    windows[2] = (WIN_STRUCT) { preview_content,   1,        0,            half_width     };
+    windows[3] = (WIN_STRUCT) { panel,             2,        LINES - PH,   0              };
 }
 
 /*
