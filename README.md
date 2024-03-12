@@ -42,5 +42,5 @@ You will need to run these with elevated privilages.
 ```sh
 $ git clone https://github.com/piotr-marendowski/ccc
 $ make 
-# make install
+$ sudo make install
 ```
