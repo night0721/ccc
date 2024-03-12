@@ -1,11 +1,12 @@
 #include <string.h>
 #include <stdlib.h>
+#include <libgen.h>
 
 #include "util.h"
 
 /* files in a link list data structure */
 typedef struct file {
-    char *name;
+    char *path;
     char *stats;
     /* put some more useful stat here */
     struct file *next;
@@ -27,16 +28,26 @@ long files_len()
     return count;
 }
 
-long add_file(char *filename, char *stats)
+void clear_files()
+{
+    file *tmp;
+    while (files != NULL) {
+        tmp = files;
+        files = files->next;
+        free(tmp);
+    }
+}
+
+long add_file(char *filepath, char *stats)
 {
     file *current = files;
     file *new_file = memalloc(sizeof(file));
-    char *buf = strdup(filename);
+    char *buf = strdup(filepath);
     char *buf2 = strdup(stats);
     if (buf == NULL || buf2 == NULL) {
         perror("ccc");
     }
-    new_file->name = buf;
+    new_file->path = buf;
     new_file->stats = buf2; 
     new_file->next = NULL;
     if (current == NULL) {
@@ -67,11 +78,11 @@ file *get_file(long index)
     return current;
 }
 
-char *get_filename(long index)
+char *get_filepath(long index)
 {
     file *file = get_file(index);
     if (file != NULL) {
-        char *name = strdup(file->name);
+        char *name = strdup(file->path);
         if (!name) {
             perror("ccc");
         }
@@ -85,7 +96,8 @@ char *get_line(long index)
 {
     file *file = get_file(index);
     if (file != NULL) {
-        char *name = strdup(file->name);
+        char *name = strdup(file->path);
+        name = basename(name);
         char *stats = strdup(file->stats);
         if (name == NULL || stats == NULL) {
             perror("ccc");
