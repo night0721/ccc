@@ -82,6 +82,9 @@ int main(int argc, char** argv)
     list_files(cwd);
     highlight_current_line();
 
+    char a[100];
+    sprintf(a, "notify-send \"%d\"", LINES);
+    system(a);
     /* set window name */
     printf("%c]2;ccc: %s%c", ESC, cwd, ESC);
 
@@ -157,6 +160,7 @@ int main(int argc, char** argv)
 
                 highlight_current_line();
                 break;
+
             /* jump down */
             case '\x04':
                 if ((current_selection + JUMP_NUM) < (files_len() - 1))
@@ -166,6 +170,7 @@ int main(int argc, char** argv)
 
                 highlight_current_line();
                 break;
+
             /* go down */
             case 'j':
                 if (current_selection < (files_len() - 1))
@@ -173,11 +178,13 @@ int main(int argc, char** argv)
 
                 highlight_current_line();
                 break;
+
             /* jump to the bottom */
             case 'G':
                 current_selection = (files_len() - 1);
                 highlight_current_line();
                 break;
+
             /* jump to the top */
             case 'g':
                 second = getch();
@@ -269,9 +276,8 @@ long long get_directory_size(const char *path)
             if (strcmp(ep->d_name, ".") == 0 || strcmp(ep->d_name, "..") == 0) {
                 continue;
             }
-
             // build full path of entry 
-            char full_path[1024];
+            char full_path[PATH_MAX];
             snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
 
             if (lstat(full_path, &statbuf) == -1) {
@@ -279,7 +285,6 @@ long long get_directory_size(const char *path)
                 closedir(dp);
                 return -1;
             }
-
             // recursively calculate its size if it is directory
             if (S_ISDIR(statbuf.st_mode)) {
                 total_size += get_directory_size(full_path);
@@ -288,13 +293,12 @@ long long get_directory_size(const char *path)
                 total_size += statbuf.st_size;
             }
         }
-
         closedir(dp);
     } else {
         perror("ccc");
+        return -1;
     }
 
-    
     return total_size;
 }
 
@@ -357,22 +361,42 @@ long add_file_stat(char *filepath)
  */
 void highlight_current_line()
 {
-    for (long i = 0; i < files_len(); i++) {
-        if (i == current_selection) {
+    long overflow = 0;
+    if (current_selection > LINES - 4) {
+        /* overflown */
+        overflow = current_selection - (LINES - 4);
+    }
+
+    /* calculate range of files to show */
+    long range = files_len();
+    if (range > LINES - 3) {
+        /* if there is more files than lines available to display*/
+        /* shrink range to avaiable lines to display */
+        /* with overflow to keep number of iterations to be constant */
+        range = LINES - 3 + overflow;
+    }
+    
+    wclear(directory_content);
+    long line_count = 0;
+    for (long i = overflow; i < range; i++) {
+        if ((overflow == 0 && i == current_selection) || (overflow != 0 && i == current_selection)) {
             wattron(directory_content, A_REVERSE);
             wattron(directory_content, COLOR_PAIR(1));
 
             /* update the panel */
             wclear(panel);
-            wprintw(panel, "(%ld/%ld) %s", i + 1, files_len(), cwd);
+            wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
         }
         /* print the actual filename and stats */
         char *line = get_line(i);
-        mvwprintw(directory_content, i, 0, "%s", line);
-
+        if (overflow > 0)
+            mvwprintw(directory_content, line_count, 0, "%s", line);
+        else
+            mvwprintw(directory_content, i, 0, "%s", line);
         wattroff(directory_content, A_REVERSE);
         wattroff(directory_content, COLOR_PAIR(1));
         free(line);
+        line_count++;
     }
 
     wrefresh(directory_content);
@@ -455,6 +479,8 @@ void init_windows()
     draw_border_title(directory_border,  true);
     draw_border_title(preview_border,   false);
 
+    scrollok(directory_content, true);
+    scrollok(preview_content, true);
     /*                          window             location  y,            x           */
     windows[0] = (WIN_STRUCT) { directory_border,         0,        0,            0              };
     windows[1] = (WIN_STRUCT) { directory_border,         0,        0,            0              };
