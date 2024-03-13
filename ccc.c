@@ -301,12 +301,13 @@ long add_file_stat(char *filepath)
     /* max 25 chars due to long, space, suffix and nul */
     char *size = memalloc(25 * sizeof(char));
     int unit = 0;
-    const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
+    const char* units[] = {"  B", "KiB", "MiB", "GiB", "TiB", "PiB"};
     while (bytes > 1024) {
         bytes /= 1024;
         unit++;
     }
-    sprintf(size, "%.*f%s", unit, bytes, units[unit]);
+    /* 4 sig fig, limiting characters to have better format  */
+    sprintf(size, "%-6.4g %-3s", bytes, units[unit]);
     
     /* get file type */
     char *type = memalloc(4 * sizeof(char)); /* 3 chars for type */
