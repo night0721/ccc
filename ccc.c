@@ -139,7 +139,7 @@ int main(int argc, char** argv)
                 break;
                 */
 
-            /* jump up */
+            /* jump up (ctrl u)*/
             case '\x15':
                 if ((current_selection - JUMP_NUM) > 0)
                     current_selection -= JUMP_NUM;
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* jump down */
+            /* jump down (ctrl d)*/
             case '\x04':
                 if ((current_selection + JUMP_NUM) < (files_len() - 1))
                     current_selection += JUMP_NUM;
