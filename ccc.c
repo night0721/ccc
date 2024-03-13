@@ -24,7 +24,8 @@ typedef struct {
 
 /* functions' definitions */
 void list_files(const char *path);
-char *get_file_stat(char *filename);
+long long get_directory_size(const char *path);
+long add_file_stat(char *filename);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
@@ -64,11 +65,12 @@ int main(int argc, char** argv)
         endwin();
         die("ccc: Color is not supported in your terminal.\n");
     } else {
+        use_default_colors();
         start_color();
     }
 
-    init_pair(1, COLOR_BLUE, COLOR_BLACK);  /* foreground, background */
-    init_pair(2, COLOR_CYAN, COLOR_BLACK);  /* active color */
+    init_pair(1, COLOR_BLUE, -1);  /* foreground, background */
+    init_pair(2, COLOR_CYAN, -1);  /* active color */
 
     half_width = COLS / 2;
     init_windows();
@@ -119,17 +121,14 @@ int main(int argc, char** argv)
 
             /* enter directory/open a file */
             case 'l':;
-                char *filename = get_filepath(current_selection);
-                if (filename != NULL) {
-                    struct stat file_stat;
-                    stat(filename, &file_stat);
-                    
+                file *file = get_file(current_selection);
+                if (file != NULL) {
                     /* check if it is directory or regular file */
-                    if (S_ISDIR(file_stat.st_mode)) {
+                    if (strncmp(file->type, "DIR", 3) == 0) {
                         /* change cwd to directory */
-                        strcpy(cwd, filename);
+                        strcpy(cwd, file->path);
                         clear_files();
-                        list_files(filename);
+                        list_files(cwd);
                         current_selection = 0;
                         highlight_current_line();
                     }
@@ -200,12 +199,15 @@ int main(int argc, char** argv)
                 for (int i = 0; i < 2; i++) {
                     delwin(windows[i].window);
                 }
+                endwin();
                 init_windows();
                 break;
             default:
                 break;
         }
     }
+    clear_files();
+    clear_marked();
     endwin();
     return 0;
 }
@@ -220,8 +222,7 @@ void list_files(const char *path)
     struct dirent *ep;
 
     draw_border_title(directory_border,  true);
-    dp = opendir(path);
-    if (dp != NULL) {
+    if ((dp = opendir(path)) != NULL) {
         int count = 0;
         /* clear directory window to ready for printing */
         wclear(directory_content);
@@ -234,19 +235,16 @@ void list_files(const char *path)
 
             /* can't be strncmp as that would filter out the dotfiles */
             if (strcmp(filename, ".") && strcmp(filename, "..")) {
-
                 /* construct full file path */
                 filename[0] = '\0';
                 strcat(filename, cwd);
                 strcat(filename, "/");
                 strcat(filename, ep->d_name); /* add file name */
 
-                char *stats = get_file_stat(filename);
-                long index = add_file(filename, stats);
+                long index = add_file_stat(filename);
                 char *line = get_line(index);
                
                 mvwprintw(directory_content, count, 0, "%s", line);
-                free(stats);
                 free(line);
                 count++;
             }
@@ -259,20 +257,69 @@ void list_files(const char *path)
     }
 }
 
+long long get_directory_size(const char *path)
+{
+    DIR *dp;
+    struct dirent *ep;
+    struct stat statbuf;
+    long long total_size = 0;
+
+    if ((dp = opendir(path)) != NULL) {
+        while ((ep = readdir(dp)) != NULL) {
+            if (strcmp(ep->d_name, ".") == 0 || strcmp(ep->d_name, "..") == 0) {
+                continue;
+            }
+
+            // build full path of entry 
+            char full_path[1024];
+            snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
+
+            if (lstat(full_path, &statbuf) == -1) {
+                perror("lstat");
+                closedir(dp);
+                return -1;
+            }
+
+            // recursively calculate its size if it is directory
+            if (S_ISDIR(statbuf.st_mode)) {
+                total_size += get_directory_size(full_path);
+            } else {
+                // else add the size of the file to the total
+                total_size += statbuf.st_size;
+            }
+        }
+
+        closedir(dp);
+    } else {
+        perror("ccc");
+    }
+
+    
+    return total_size;
+}
+
 /*
- * Get file's last modified time and size
+ * Get file's last modified time, size, type
+ * Add that file into list
  */
-char *get_file_stat(char *filename)
+long add_file_stat(char *filepath)
 {
     struct stat file_stat;
-    stat(filename, &file_stat);
+    stat(filepath, &file_stat);
 
+    /* get last modified time */
     char *time = memalloc(20 * sizeof(char));
     /* format last modified time to a string */
     strftime(time, 20, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
     
+    
+    /* get file size */
     double bytes = file_stat.st_size;
-    char *size = memalloc(25 * sizeof(char)); /* max 25 chars due to long, space, suffix and nul */
+    if (S_ISDIR(file_stat.st_mode)) {
+        bytes = (double) get_directory_size(filepath);
+    }
+    /* max 25 chars due to long, space, suffix and nul */
+    char *size = memalloc(25 * sizeof(char));
     int unit = 0;
     const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
     while (bytes > 1024) {
@@ -281,13 +328,28 @@ char *get_file_stat(char *filename)
     }
     sprintf(size, "%.*f%s", unit, bytes, units[unit]);
     
+    /* get file type */
+    char *type = memalloc(4 * sizeof(char)); /* 3 chars for type */
+    if (S_ISDIR(file_stat.st_mode)) {
+        strcpy(type, "DIR"); /* directory */
+    } else if (S_ISREG(file_stat.st_mode)) {
+        strcpy(type, "REG"); /* regular file */
+    } else if (S_ISLNK(file_stat.st_mode)) {
+        strcpy(type, "LNK"); /* symbolic link */
+    } // socket, block device, character device and FIFO not yet implemented
+
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
     total_stat[strlen(total_stat)] = '\0';
 
     free(time);
     free(size);
-    return total_stat;
+    
+    long index = add_file(filepath, total_stat, type);
+
+    free(total_stat);
+    free(type);
+    return index;
 }
 
 /*
