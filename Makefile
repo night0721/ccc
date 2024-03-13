@@ -9,8 +9,6 @@ SRC = ccc.c util.c file.c
 LDFLAGS = $(shell pkg-config --libs ncurses)
 CFLAGS = -march=native -mtune=native -O3 -pipe -O3 -s -std=c99 -W -pedantic $(shell pkg-config --cflags ncurses) -Wall -Wextra # -Werror
 CC=cc
-CONF = config.h
-DEFCONF = config.def.h
 PREFIX ?= /usr/local
 
 BINDIR = $(PREFIX)/bin
@@ -18,13 +16,10 @@ MANDIR = $(PREFIX)/share/man/man1
 
 .PHONY: all install uninstall clean
 
-all: $(TARGET)
-
-$(TARGET): $(CONF) $(SRC)
+$(TARGET): $(SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC) -o $@
 
-$(CONF):
-	cp -v $(DEFCONF) $(CONF)
+all: $(TARGET)
 
 install: $(TARGET)
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -40,3 +35,5 @@ uninstall:
 
 clean:
 	$(RM) $(TARGET)
+
+ccc.o: $(CONF)
