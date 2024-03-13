@@ -82,9 +82,6 @@ int main(int argc, char** argv)
     list_files(cwd);
     highlight_current_line();
 
-    char a[100];
-    sprintf(a, "notify-send \"%d\"", LINES);
-    system(a);
     /* set window name */
     printf("%c]2;ccc: %s%c", ESC, cwd, ESC);
 
