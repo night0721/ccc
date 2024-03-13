@@ -273,7 +273,7 @@ long long get_directory_size(const char *path)
             if (strcmp(ep->d_name, ".") == 0 || strcmp(ep->d_name, "..") == 0) {
                 continue;
             }
-            // build full path of entry 
+            /* build full path of entry */
             char full_path[PATH_MAX];
             snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
 
@@ -282,11 +282,11 @@ long long get_directory_size(const char *path)
                 closedir(dp);
                 return -1;
             }
-            // recursively calculate its size if it is directory
+            /* recursively calculate its size if it is directory */
             if (S_ISDIR(statbuf.st_mode)) {
                 total_size += get_directory_size(full_path);
             } else {
-                // else add the size of the file to the total
+                /* else add the size of the file to the total */
                 total_size += statbuf.st_size;
             }
         }
