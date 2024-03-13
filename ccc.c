@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,6 +7,7 @@
 #include <dirent.h>         /* directories etc. */
 #include <sys/stat.h>
 #include <errno.h>
+#include <ftw.h>
 #include <time.h>
 #include <ncurses.h>
 
@@ -22,7 +24,7 @@ typedef struct {
 
 /* functions' definitions */
 void list_files(const char *path);
-long long get_directory_size(const char *path);
+int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 long add_file_stat(char *filename);
 void highlight_current_line();
 void show_file_content();
@@ -41,6 +43,8 @@ WINDOW *directory_content;
 WINDOW *preview_border;
 WINDOW *preview_content;
 WINDOW *panel;
+
+unsigned long total_dir_size;
 
 int main(int argc, char** argv)
 {
@@ -260,42 +264,10 @@ void list_files(const char *path)
     }
 }
 
-long long get_directory_size(const char *path)
+int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-    DIR *dp;
-    struct dirent *ep;
-    struct stat statbuf;
-    long long total_size = 0;
-
-    if ((dp = opendir(path)) != NULL) {
-        while ((ep = readdir(dp)) != NULL) {
-            if (strcmp(ep->d_name, ".") == 0 || strcmp(ep->d_name, "..") == 0) {
-                continue;
-            }
-            /* build full path of entry */
-            char full_path[PATH_MAX];
-            snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
-
-            if (lstat(full_path, &statbuf) == -1) {
-                perror("lstat");
-                closedir(dp);
-                return -1;
-            }
-            /* recursively calculate its size if it is directory */
-            if (S_ISDIR(statbuf.st_mode)) {
-                total_size += get_directory_size(full_path);
-            } else {
-                /* else add the size of the file to the total */
-                total_size += statbuf.st_size;
-            }
-        }
-        closedir(dp);
-    } else {
-        perror("ccc");
-        return -1;
-    }
-
-    return total_size;
+    total_dir_size += sb->st_size;
+    return 0;
 }
 
 /*
@@ -321,7 +293,10 @@ long add_file_stat(char *filepath)
     /* get file size */
     double bytes = file_stat.st_size;
     if (S_ISDIR(file_stat.st_mode)) {
-        bytes = (double) get_directory_size(filepath);
+        /* at most 15 fd opened */
+        total_dir_size = 0;
+        nftw(filepath, &get_directory_size, 15, FTW_PHYS);
+        bytes = total_dir_size;
     }
     /* max 25 chars due to long, space, suffix and nul */
     char *size = memalloc(25 * sizeof(char));

@@ -7,9 +7,10 @@ SRC = ccc.c util.c file.c
 
 # Flags
 LDFLAGS = $(shell pkg-config --libs ncurses)
-CFLAGS = -march=native -mtune=native -O3 -pipe -O3 -s -std=c99 -W -pedantic $(shell pkg-config --cflags ncurses) -Wall -Wextra # -Werror
+CFLAGS = -march=native -mtune=native -O3 -pipe -O3 -s -std=c99 -pedantic $(shell pkg-config --cflags ncurses) -Wall # -Wextra -Werror
 CC=cc
 PREFIX ?= /usr/local
+CONF = config.h
 
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
