@@ -5,6 +5,7 @@
 #include <linux/limits.h>
 #include <dirent.h>         /* directories etc. */
 #include <sys/stat.h>
+#include <errno.h>
 #include <time.h>
 #include <ncurses.h>
 
@@ -306,7 +307,12 @@ long long get_directory_size(const char *path)
 long add_file_stat(char *filepath)
 {
     struct stat file_stat;
-    stat(filepath, &file_stat);
+    if (stat(filepath, &file_stat) == -1) {
+        /* can't be triggered ? */
+        if (errno == EACCES) {
+            return add_file(filepath, "", "");
+        }
+    }
 
     /* get last modified time */
     char *time = memalloc(20 * sizeof(char));
@@ -409,6 +415,7 @@ void highlight_current_line()
     wrefresh(panel);
     /* show file content every time cursor changes */
     show_file_content();
+    wrefresh(preview_content);
 }
 
 /*
@@ -416,11 +423,12 @@ void highlight_current_line()
  */
 void show_file_content()
 {
-    FILE *file = fopen(get_filepath((long) current_selection), "rb");
+    wclear(preview_content);
+    file *current_file = get_file((long) current_selection);
+    if (strncmp(current_file->type, "DIR", 3) == 0) return;
+    FILE *file = fopen(current_file->path, "rb");
     if (file) {
-        wclear(preview_content);
         draw_border_title(preview_border, true);
-
         fseek(file, 0, SEEK_END);
         long length = ftell(file);
         /* check if file isn't empty */
@@ -429,7 +437,6 @@ void show_file_content()
             char *buffer = memalloc(length * sizeof(char));
             fread(buffer, 1, length, file);
             mvwprintw(preview_content, 0, 0, "%s", buffer);
-            wrefresh(preview_content);
             free(buffer);
         } else {
             wclear(preview_content);
@@ -486,7 +493,6 @@ void init_windows()
     draw_border_title(preview_border,   false);
 
     scrollok(directory_content, true);
-    scrollok(preview_content, true);
     /*                          window             location  y,            x           */
     windows[0] = (WIN_STRUCT) { directory_border,         0,        0,            0              };
     windows[1] = (WIN_STRUCT) { directory_border,         0,        0,            0              };
