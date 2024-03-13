@@ -340,7 +340,16 @@ long add_file_stat(char *filepath)
         strcpy(type, "REG"); /* regular file */
     } else if (S_ISLNK(file_stat.st_mode)) {
         strcpy(type, "LNK"); /* symbolic link */
-    } // socket, block device, character device and FIFO not yet implemented
+    } else if (S_ISCHR(file_stat.st_mode)) {
+        strcpy(type, "CHR"); /* character device */
+    } else if (S_ISSOCK(file_stat.st_mode)) {
+        strcpy(type, "SOC"); /* socket */
+    } else if (S_ISBLK(file_stat.st_mode)) {
+        strcpy(type, "BLK"); /* block device */
+    } else if (S_ISFIFO(file_stat.st_mode)) {
+        strcpy(type, "FIF"); /* FIFO */
+    }
+    /* don't know how to handle socket, block device, character device and FIFO */
 
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
