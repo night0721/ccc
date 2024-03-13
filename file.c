@@ -8,14 +8,16 @@
 typedef struct file {
     char *path;
     char *stats;
+    char *type;
     /* put some more useful stat here */
     struct file *next;
 } file;
 
 file *files = NULL;
+file *marked = NULL;
 
 /*
- * get length of files linked list
+ * Get length of files linked list
  */
 long files_len()
 {
@@ -28,6 +30,21 @@ long files_len()
     return count;
 }
 
+/*
+ * Get length of marked files
+ */
+long marked_len()
+{
+    file *current = marked;
+    int count = 0;
+    while (current != NULL) {
+        count++;
+        current = current->next;
+    }
+    return count;
+
+}
+
 void clear_files()
 {
     file *tmp;
@@ -38,17 +55,29 @@ void clear_files()
     }
 }
 
-long add_file(char *filepath, char *stats)
+void clear_marked()
+{
+    file *tmp;
+    while (marked != NULL) {
+        tmp = marked;
+        files = marked->next;
+        free(tmp);
+    }
+}
+
+long add_file(char *filepath, char *stats, char *type)
 {
     file *current = files;
     file *new_file = memalloc(sizeof(file));
     char *buf = strdup(filepath);
     char *buf2 = strdup(stats);
-    if (buf == NULL || buf2 == NULL) {
+    char *buf3 = strdup(type);
+    if (buf == NULL || buf2 == NULL || buf3 == NULL) {
         perror("ccc");
     }
     new_file->path = buf;
     new_file->stats = buf2; 
+    new_file->type = buf3;
     new_file->next = NULL;
     if (current == NULL) {
         files = new_file;
@@ -92,6 +121,9 @@ char *get_filepath(long index)
     }
 }
 
+/*
+ * Construct a formatted line for display
+ */
 char *get_line(long index)
 {
     file *file = get_file(index);
