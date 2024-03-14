@@ -77,8 +77,15 @@ int main(int argc, char** argv)
         start_color();
     }
 
-    init_pair(1, COLOR_BLUE, -1);  /* foreground, background */
-    init_pair(2, COLOR_CYAN, -1);  /* active color */
+    /* colors */
+    init_pair(1, COLOR_BLACK, -1);      /*  */
+    init_pair(2, COLOR_RED, -1);        /*  */
+    init_pair(3, COLOR_GREEN, -1);      /* LNK */
+    init_pair(4, COLOR_YELLOW, -1);     /* BLK */
+    init_pair(5, COLOR_BLUE, -1);       /* DIR */ 
+    init_pair(6, COLOR_MAGENTA, -1);    /*  */
+    init_pair(7, COLOR_CYAN, -1);       /*  */
+    init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     half_width = COLS / 2;
     init_windows();
@@ -258,6 +265,7 @@ int main(int argc, char** argv)
 }
 
 /*
+<<<<<<< HEAD
  * change directory in window
  */
 void change_dir(const char *buf)
@@ -343,7 +351,7 @@ void populate_files(const char *path)
                 filename[0] = '\0';
                 strcat(filename, cwd);
                 strcat(filename, "/");
-                strcat(filename, ep->d_name); /* add file name */
+                strcat(filename, ep->d_name);   /* add file name */
 
                 add_file_stat(filename, 0);
             }
@@ -373,7 +381,7 @@ long add_file_stat(char *filepath, int ftype)
     if (stat(filepath, &file_stat) == -1) {
         /* can't be triggered ? */
         if (errno == EACCES) {
-            return add_file(filepath, "", "");
+            return add_file(filepath, "", "", 8);
         }
     }
 
@@ -390,7 +398,7 @@ long add_file_stat(char *filepath, int ftype)
         nftw(filepath, &get_directory_size, 15, FTW_PHYS);
         bytes = total_dir_size;
     }
-    /* max 25 chars due to long, space, suffix and nul */
+    /* max 25 chars due to long, space, suffix and null */
     char *size = memalloc(25 * sizeof(char));
     int unit = 0;
     const char* units[] = {"  B", "KiB", "MiB", "GiB", "TiB", "PiB"};
@@ -401,22 +409,32 @@ long add_file_stat(char *filepath, int ftype)
     /* 4 sig fig, limiting characters to have better format  */
     sprintf(size, "%-6.4g %-3s", bytes, units[unit]);
     
-    /* get file type */
-    char *type = memalloc(4 * sizeof(char)); /* 3 chars for type */
+    /* get file type and color */
+    char *type = memalloc(4 * sizeof(char));    /* 4 chars for type */
+    int color;
     if (S_ISDIR(file_stat.st_mode)) {
-        strcpy(type, "DIR"); /* directory */
+        strcpy(type, "DIR");        /* directory type */
+        color = 5;                 /* blue color */
     } else if (S_ISREG(file_stat.st_mode)) {
-        strcpy(type, "REG"); /* regular file */
+        strcpy(type, "REG");        /* regular file */
+        color = 8;                 /* white color */
     } else if (S_ISLNK(file_stat.st_mode)) {
-        strcpy(type, "LNK"); /* symbolic link */
+        strcpy(type, "LNK");        /* symbolic link */
+        color = 3;                 /* green color */
     } else if (S_ISCHR(file_stat.st_mode)) {
-        strcpy(type, "CHR"); /* character device */
+        strcpy(type, "CHR");        /* character device */
+        color = 8;                 /* white color */
     } else if (S_ISSOCK(file_stat.st_mode)) {
-        strcpy(type, "SOC"); /* socket */
+        strcpy(type, "SOC");        /* socket */
+        color = 8;                 /* white color */
     } else if (S_ISBLK(file_stat.st_mode)) {
-        strcpy(type, "BLK"); /* block device */
+        strcpy(type, "BLK");        /* block device */
+        color = 4;                 /* yellow color */
     } else if (S_ISFIFO(file_stat.st_mode)) {
-        strcpy(type, "FIF"); /* FIFO */
+        strcpy(type, "FIF");        /* FIFO */
+        color = 8;                 /* white color */
+    } else {
+        color = 8;                 /* white color */
     }
     /* don't know how to handle socket, block device, character device and FIFO */
 
@@ -432,7 +450,7 @@ long add_file_stat(char *filepath, int ftype)
     free(time);
     free(size);
     
-    long index = add_file(filepath, total_stat, type);
+    long index = add_file(filepath, total_stat, type, color);
 
     free(total_stat);
     free(type);
@@ -472,7 +490,7 @@ void highlight_current_line()
     for (long i = overflow; i < range; i++) {
         if ((overflow == 0 && i == current_selection) || (overflow != 0 && i == current_selection)) {
             wattron(directory_content, A_REVERSE);
-            wattron(directory_content, COLOR_PAIR(1));
+            wattron(directory_content, COLOR_PAIR(5));
 
             /* update the panel */
             wclear(panel);
@@ -480,12 +498,18 @@ void highlight_current_line()
         }
         /* print the actual filename and stats */
         char *line = get_line(i);
+        int color = get_color(i);
+
+        /* print the whole directory with colors */
+        wattron(directory_content, COLOR_PAIR(color));
         if (overflow > 0)
             mvwprintw(directory_content, line_count, 0, "%s", line);
         else
             mvwprintw(directory_content, i, 0, "%s", line);
+
         wattroff(directory_content, A_REVERSE);
-        wattroff(directory_content, COLOR_PAIR(1));
+        wattroff(directory_content, COLOR_PAIR(color));
+        wattroff(directory_content, COLOR_PAIR(5));
         free(line);
         line_count++;
     }
@@ -595,9 +619,9 @@ void draw_border_title(WINDOW *window, bool active)
 {
     /* turn on color depends on active */
     if (active) {
-        wattron(window, COLOR_PAIR(2));
+        wattron(window, COLOR_PAIR(7));
     } else {
-        wattron(window, COLOR_PAIR(1));
+        wattron(window, COLOR_PAIR(5));
     }
     /* draw top border */
     mvwaddch(window, 0, 0, ACS_ULCORNER);  /* upper left corner */
@@ -616,9 +640,9 @@ void draw_border_title(WINDOW *window, bool active)
 
     /* turn color off after turning it on */
     if (active) {
-        wattroff(window, COLOR_PAIR(2));
+        wattroff(window, COLOR_PAIR(7));
     } else {
-        wattroff(window, COLOR_PAIR(1));
+        wattroff(window, COLOR_PAIR(5));
     }
     wrefresh(window);  /* Refresh the window to see the colored border and title */
 }
