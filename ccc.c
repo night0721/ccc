@@ -28,7 +28,7 @@ void change_dir(const char *buf);
 int mkdir_p(const char *destdir);
 void populate_files(const char *path);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-long add_file_stat(char *filepath, int type);
+long add_file_stat(char *filepath, int ftype);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
