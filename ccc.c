@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE 600
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -61,6 +62,7 @@ int main(int argc, char** argv)
     noecho();
     cbreak();
     curs_set(0);
+    keypad(stdscr, TRUE);
 
     /* check terminal has colors */
     if (!has_colors()) {
@@ -87,15 +89,15 @@ int main(int argc, char** argv)
     /* set window name */
     printf("%c]2;ccc: %s%c", ESC, cwd, ESC);
 
-    int ch, second;
+    int ch, ch2;
     while (1) {
         if (COLS < 80 || LINES < 24) {
             endwin();
             die("ccc: Terminal size needs to be at least 80x24\n");
         }
         ch = getch();
+        printf("%d ",ch);
         switch (ch) {
-
             /* quit */
             case 'q':
                 endwin();
@@ -109,7 +111,9 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* go back */
+            /* go back by backspace or h or left arrow */
+            case 127:
+            case 260:
             case 'h':
                 clear_files();
                 /* get parent directory */
@@ -122,7 +126,9 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            /* enter directory/open a file */
+            /* enter directory/open a file using enter or l or right arrow */
+            case 10:
+            case 261:
             case 'l':;
                 file *file = get_file(current_selection);
                 if (file != NULL) {
@@ -134,6 +140,8 @@ int main(int argc, char** argv)
                         list_files(cwd);
                         current_selection = 0;
                         highlight_current_line();
+                    } else if (strncmp(file->type, "REG", 3) == 0) {
+                        edit_file();
                     }
                 }
                 break;
@@ -153,7 +161,8 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* go up */
+            /* go up by k or up arrow */
+            case 259:
             case 'k':
                 if (current_selection > 0)
                     current_selection--;
@@ -171,7 +180,8 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* go down */
+            /* go down by j or down arrow */
+            case 258:
             case 'j':
                 if (current_selection < (files_len() - 1))
                     current_selection++;
@@ -187,8 +197,8 @@ int main(int argc, char** argv)
 
             /* jump to the top */
             case 'g':
-                second = getch();
-                switch (second) {
+                ch2 = getch();
+                switch (ch2) {
                     case 'g':
                         current_selection = 0;
                         highlight_current_line();
@@ -197,11 +207,16 @@ int main(int argc, char** argv)
                         break;
                 }
                 break;
-            case 'e':
-                edit_file();
+
+            /* mark files by space */
+            case 32:
+                ;
                 break;
-            case 27: /* esc */
+            
+            /* escape */
+            case 27:
                 break;
+
             case KEY_RESIZE:
                 for (int i = 0; i < 2; i++) {
                     delwin(windows[i].window);
