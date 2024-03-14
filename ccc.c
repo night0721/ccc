@@ -107,7 +107,7 @@ int main(int argc, char** argv)
             die("ccc: Terminal size needs to be at least 80x24\n");
         }
         ch = getch();
-        /* printf("%d ",ch); */
+        printf("%d ",ch);
         switch (ch) {
             /* quit */
             case 'q':
@@ -120,8 +120,8 @@ int main(int argc, char** argv)
                 break;
 
             /* go back by backspace or h or left arrow */
-            case 127:
-            case 260:
+            case BACKSPACE:
+            case LEFT:
             case 'h':;
                 /* get parent directory */
                 char *last_slash = strrchr(cwd, '/');
@@ -132,8 +132,8 @@ int main(int argc, char** argv)
                 break;
 
             /* enter directory/open a file using enter or l or right arrow */
-            case 10:
-            case 261:
+            case ENTER:
+            case RIGHT:
             case 'l':;
                 file *file = get_file(current_selection);
                 if (file != NULL) {
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
                 */
 
             /* jump up (ctrl u)*/
-            case '\x15':
+            case CTRLU:
                 if ((current_selection - JUMP_NUM) > 0)
                     current_selection -= JUMP_NUM;
                 else
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
                 break;
 
             /* go up by k or up arrow */
-            case 259:
+            case UP:
             case 'k':
                 if (current_selection > 0)
                     current_selection--;
@@ -172,7 +172,7 @@ int main(int argc, char** argv)
                 break;
 
             /* jump down (ctrl d)*/
-            case '\x04':
+            case CTRLD:
                 if ((current_selection + JUMP_NUM) < (files_len() - 1))
                     current_selection += JUMP_NUM;
                 else
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
                 break;
 
             /* go down by j or down arrow */
-            case 258:
+            case DOWN:
             case 'j':
                 if (current_selection < (files_len() - 1))
                     current_selection++;
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
                 break;
 
             /* ~ to go home */
-            case 126:;
+            case TILDE:;
                 char *home = getenv("HOME");
                 if (home == NULL) {
                     wpprintw("$HOME is not defined");
@@ -239,12 +239,12 @@ int main(int argc, char** argv)
                 break;
 
             /* mark files by space */
-            case 32:
+            case SPACE:
                 add_file_stat(get_filepath(current_selection), 1);
                 break;
             
             /* escape */
-            case 27:
+            case ESC:
                 break;
 
             case KEY_RESIZE:
@@ -440,6 +440,8 @@ long add_file_stat(char *filepath, int ftype)
     if (ftype == 1) {
         long index = add_marked(filepath, type);
         free(type);
+        free(size);
+        free(time);
         return index;
     }
     char *total_stat = memalloc(45 * sizeof(char));
@@ -492,6 +494,14 @@ void highlight_current_line()
 
             /* update the panel */
             wclear(panel);
+            long num_marked = marked_len();
+            if (num_marked > 0) {
+                /* largest long is 2147483647, 10 characters
+                 * (x selected), 11 characters */
+                char *selected = memalloc(21 * sizeof(char));
+                snprintf(selected, 21, "(selected )", num_marked);
+                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
+            }
             wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
         }
         /* print the actual filename and stats */
