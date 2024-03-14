@@ -14,6 +14,7 @@ long marked_len();
 void clear_files();
 void clear_marked();
 long add_file(char *filename, char *time, char *type);
+long add_marked(char *filepath, char *type);
 file *get_file(long index);
 char *get_filepath(long index);
 char *get_line(long index);

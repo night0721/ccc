@@ -92,6 +92,31 @@ long add_file(char *filepath, char *stats, char *type)
     return index;
 }
 
+long add_marked(char *filepath, char *type)
+{
+    file *current = marked;
+    file *new_file = memalloc(sizeof(file));
+    char *buf = strdup(filepath);
+    char *buf2 = strdup(type);
+    if (buf == NULL || buf2 == NULL) {
+        perror("ccc");
+    }
+    new_file->path = buf;
+    new_file->type = buf2;
+    new_file->next = NULL;
+    if (current == NULL) {
+        files = new_file;
+        return 0;
+    }
+    long index = 1;
+    while (current->next != NULL) {
+        current = current->next;
+        index++;
+    }
+    current->next = new_file;
+    return index;
+}
+
 file *get_file(long index)
 {
     file *current = files;

@@ -26,9 +26,9 @@ typedef struct {
 /* functions' definitions */
 void change_dir(const char *buf);
 int mkdir_p(const char *destdir);
-void list_files(const char *path);
+void populate_files(const char *path);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-long add_file_stat(char *filename);
+long add_file_stat(char *filepath, int type);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
 
-    list_files(cwd);
+    populate_files(cwd);
     highlight_current_line();
 
     /* set window name */
@@ -233,7 +233,7 @@ int main(int argc, char** argv)
 
             /* mark files by space */
             case 32:
-                ;
+                add_file_stat(get_filepath(current_selection), 1);
                 break;
             
             /* escape */
@@ -264,7 +264,7 @@ void change_dir(const char *buf)
 {
     strcpy(cwd, buf);
     clear_files();
-    list_files(cwd);
+    populate_files(cwd);
     current_selection = 0;
     highlight_current_line();
 }
@@ -318,17 +318,16 @@ int mkdir_p(const char *destdir)
 }
 
 /*
- * Read the provided directory and list all files to window 0
+ * Read the provided directory and add all files in directory to linked list
  * ep->d_name -> filename
  */
-void list_files(const char *path)
+void populate_files(const char *path)
 {
     DIR *dp;
     struct dirent *ep;
 
     draw_border_title(directory_border,  true);
     if ((dp = opendir(path)) != NULL) {
-        int count = 0;
         /* clear directory window to ready for printing */
         wclear(directory_content);
 
@@ -346,12 +345,7 @@ void list_files(const char *path)
                 strcat(filename, "/");
                 strcat(filename, ep->d_name); /* add file name */
 
-                long index = add_file_stat(filename);
-                char *line = get_line(index);
-               
-                mvwprintw(directory_content, count, 0, "%s", line);
-                free(line);
-                count++;
+                add_file_stat(filename, 0);
             }
             free(filename);
         }
@@ -371,8 +365,9 @@ int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, s
 /*
  * Get file's last modified time, size, type
  * Add that file into list
+ * ftype: 0->dir files, 0->marked
  */
-long add_file_stat(char *filepath)
+long add_file_stat(char *filepath, int ftype)
 {
     struct stat file_stat;
     if (stat(filepath, &file_stat) == -1) {
@@ -386,7 +381,6 @@ long add_file_stat(char *filepath)
     char *time = memalloc(20 * sizeof(char));
     /* format last modified time to a string */
     strftime(time, 20, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
-    
     
     /* get file size */
     double bytes = file_stat.st_size;
@@ -426,6 +420,11 @@ long add_file_stat(char *filepath)
     }
     /* don't know how to handle socket, block device, character device and FIFO */
 
+    if (ftype == 1) {
+        long index = add_marked(filepath, type);
+        free(type);
+        return index;
+    }
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
     total_stat[strlen(total_stat)] = '\0';
@@ -439,6 +438,7 @@ long add_file_stat(char *filepath)
     free(type);
     return index;
 }
+
 
 /*
  * Highlight current line by reversing the color
