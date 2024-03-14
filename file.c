@@ -109,7 +109,7 @@ long add_marked(char *filepath, char *type)
     new_file->type = buf2;
     new_file->next = NULL;
     if (current == NULL) {
-        files = new_file;
+        marked = new_file;
         return 0;
     }
     long index = 1;
