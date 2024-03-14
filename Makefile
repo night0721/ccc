@@ -36,5 +36,3 @@ uninstall:
 
 clean:
 	$(RM) $(TARGET)
-
-ccc.o: $(CONF)
