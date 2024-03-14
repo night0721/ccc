@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE 600
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,12 +24,15 @@ typedef struct {
 } WIN_STRUCT;
 
 /* functions' definitions */
-void list_files(const char *path);
+void change_dir(const char *buf);
+int mkdir_p(const char *destdir);
+void populate_files(const char *path);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-long add_file_stat(char *filename);
+long add_file_stat(char *filepath, int ftype);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
+void wpprintw(const char *line);
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
 
@@ -56,11 +60,13 @@ int main(int argc, char** argv)
         die("ccc: No tty detected. ccc requires an interactive shell to run.\n");
 
     /* initialize screen, don't print special chars,
-     * make ctrl + c work, don't show cursor */
+     * make ctrl + c work, don't show cursor 
+     * enable arrow keys */
     initscr();
     noecho();
     cbreak();
     curs_set(0);
+    keypad(stdscr, TRUE);
 
     /* check terminal has colors */
     if (!has_colors()) {
@@ -71,8 +77,15 @@ int main(int argc, char** argv)
         start_color();
     }
 
-    init_pair(1, COLOR_BLUE, -1);  /* foreground, background */
-    init_pair(2, COLOR_CYAN, -1);  /* active color */
+    /* colors */
+    init_pair(1, COLOR_BLACK, -1);      /*  */
+    init_pair(2, COLOR_RED, -1);        /*  */
+    init_pair(3, COLOR_GREEN, -1);      /* LNK */
+    init_pair(4, COLOR_YELLOW, -1);     /* BLK */
+    init_pair(5, COLOR_BLUE, -1);       /* DIR */ 
+    init_pair(6, COLOR_MAGENTA, -1);    /*  */
+    init_pair(7, COLOR_CYAN, -1);       /*  */
+    init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     half_width = COLS / 2;
     init_windows();
@@ -81,59 +94,55 @@ int main(int argc, char** argv)
     cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
 
-    list_files(cwd);
+    populate_files(cwd);
     highlight_current_line();
 
     /* set window name */
     printf("%c]2;ccc: %s%c", ESC, cwd, ESC);
 
-    int ch, second;
+    int ch, ch2;
     while (1) {
         if (COLS < 80 || LINES < 24) {
             endwin();
             die("ccc: Terminal size needs to be at least 80x24\n");
         }
         ch = getch();
+        /* printf("%d ",ch); */
         switch (ch) {
-
             /* quit */
             case 'q':
                 endwin();
                 return 0;
 
-            /* reload */
-            case '.':
-                clear_files();
-                list_files(cwd);
-                current_selection = 0;
-                highlight_current_line();
+            /* reload using z */
+            case 'z':
+                change_dir(cwd); 
                 break;
 
-            /* go back */
-            case 'h':
-                clear_files();
+            /* go back by backspace or h or left arrow */
+            case BACKSPACE:
+            case LEFT:
+            case 'h':;
                 /* get parent directory */
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     *last_slash = '\0';
-                    list_files(cwd);
-                    current_selection = 0;
-                    highlight_current_line();
+                    change_dir(cwd);
                 }
                 break;
 
-            /* enter directory/open a file */
+            /* enter directory/open a file using enter or l or right arrow */
+            case ENTER:
+            case RIGHT:
             case 'l':;
                 file *file = get_file(current_selection);
                 if (file != NULL) {
                     /* check if it is directory or regular file */
                     if (strncmp(file->type, "DIR", 3) == 0) {
                         /* change cwd to directory */
-                        strcpy(cwd, file->path);
-                        clear_files();
-                        list_files(cwd);
-                        current_selection = 0;
-                        highlight_current_line();
+                        change_dir(file->path); 
+                    } else if (strncmp(file->type, "REG", 3) == 0) {
+                        edit_file();
                     }
                 }
                 break;
@@ -144,7 +153,7 @@ int main(int argc, char** argv)
                 */
 
             /* jump up (ctrl u)*/
-            case '\x15':
+            case CTRLU:
                 if ((current_selection - JUMP_NUM) > 0)
                     current_selection -= JUMP_NUM;
                 else
@@ -153,7 +162,8 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* go up */
+            /* go up by k or up arrow */
+            case UP:
             case 'k':
                 if (current_selection > 0)
                     current_selection--;
@@ -162,7 +172,7 @@ int main(int argc, char** argv)
                 break;
 
             /* jump down (ctrl d)*/
-            case '\x04':
+            case CTRLD:
                 if ((current_selection + JUMP_NUM) < (files_len() - 1))
                     current_selection += JUMP_NUM;
                 else
@@ -171,7 +181,8 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* go down */
+            /* go down by j or down arrow */
+            case DOWN:
             case 'j':
                 if (current_selection < (files_len() - 1))
                     current_selection++;
@@ -187,8 +198,8 @@ int main(int argc, char** argv)
 
             /* jump to the top */
             case 'g':
-                second = getch();
-                switch (second) {
+                ch2 = getch();
+                switch (ch2) {
                     case 'g':
                         current_selection = 0;
                         highlight_current_line();
@@ -197,11 +208,46 @@ int main(int argc, char** argv)
                         break;
                 }
                 break;
-            case 'e':
-                edit_file();
+
+            /* ~ to go home */
+            case TILDE:;
+                char *home = getenv("HOME");
+                if (home == NULL) {
+                    wpprintw("$HOME is not defined");
+                } else {
+                    change_dir(home);
+                }
                 break;
-            case 27: /* esc */
+
+            /* t to go to trash dir */
+            case 't':;
+                char *trash_dir = getenv("CCC_TRASH");
+                if (trash_dir == NULL) {
+                    wpprintw("$CCC_TRASH is not defined");
+                } else {
+                    if (access(trash_dir, F_OK) != 0) {
+                        /* create the directory with 755 perm if it doesn't exit */
+                        if (mkdir_p(trash_dir) == -1) {
+                            switch (errno) {
+                                case EACCES:
+                                    wpprintw("Parent directory does not allow write permission or one of directory does not allow search access");
+                            }
+                        }
+                    }
+                    change_dir(trash_dir);
+                }
                 break;
+
+            /* mark files by space */
+            case SPACE:
+                add_file_stat(get_filepath(current_selection), 1);
+                highlight_current_line();
+                break;
+            
+            /* escape */
+            case ESC:
+                break;
+
             case KEY_RESIZE:
                 for (int i = 0; i < 2; i++) {
                     delwin(windows[i].window);
@@ -220,17 +266,76 @@ int main(int argc, char** argv)
 }
 
 /*
- * Read the provided directory and list all files to window 0
+ * Change directory in window
+ */
+void change_dir(const char *buf)
+{
+    strcpy(cwd, buf);
+    clear_files();
+    populate_files(cwd);
+    current_selection = 0;
+    highlight_current_line();
+}
+
+/*
+ * Recursively create directory by creating each subdirectory
+ */
+int mkdir_p(const char *destdir)
+{
+    char *path = memalloc(PATH_MAX * sizeof(char));
+    strcpy(path, destdir);
+    if (destdir[0] == '~') {
+        char *home = getenv("HOME");
+        if (home == NULL) {
+            wpprintw("$HOME is not defined");
+            return -1;
+        }
+        /* replace ~ with home */
+        memmove(path + strlen(home), path + 1, strlen(path));
+        memcpy(path, home, strlen(home));
+    }
+    char *token = strtok(path, "/");
+    char dir_path[PATH_MAX] = "";
+
+    /* fix first / is not appearing in string */
+    if (path[0] == '/') {
+        strcat(dir_path, "/");
+    }
+
+    while (token != NULL) {
+        strcat(dir_path, token);
+        strcat(dir_path, "/");
+
+        if (mkdir(dir_path, 0755) == -1) {
+            struct stat st;
+            if (stat(dir_path, &st) == 0 && S_ISDIR(st.st_mode)) {
+                /* Directory already exists, continue to the next dir */
+                token = strtok(NULL, "/");
+                continue;
+            }
+            
+            perror("ccc");
+            free(path);
+            return -1;
+        }
+        token = strtok(NULL, "/");
+    }
+
+    free(path);
+    return 0;
+}
+
+/*
+ * Read the provided directory and add all files in directory to linked list
  * ep->d_name -> filename
  */
-void list_files(const char *path)
+void populate_files(const char *path)
 {
     DIR *dp;
     struct dirent *ep;
 
     draw_border_title(directory_border,  true);
     if ((dp = opendir(path)) != NULL) {
-        int count = 0;
         /* clear directory window to ready for printing */
         wclear(directory_content);
 
@@ -246,14 +351,9 @@ void list_files(const char *path)
                 filename[0] = '\0';
                 strcat(filename, cwd);
                 strcat(filename, "/");
-                strcat(filename, ep->d_name); /* add file name */
+                strcat(filename, ep->d_name);   /* add file name */
 
-                long index = add_file_stat(filename);
-                char *line = get_line(index);
-               
-                mvwprintw(directory_content, count, 0, "%s", line);
-                free(line);
-                count++;
+                add_file_stat(filename, 0);
             }
             free(filename);
         }
@@ -273,14 +373,15 @@ int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, s
 /*
  * Get file's last modified time, size, type
  * Add that file into list
+ * ftype: 0->dir files, 0->marked
  */
-long add_file_stat(char *filepath)
+long add_file_stat(char *filepath, int ftype)
 {
     struct stat file_stat;
     if (stat(filepath, &file_stat) == -1) {
         /* can't be triggered ? */
         if (errno == EACCES) {
-            return add_file(filepath, "", "");
+            return add_file(filepath, "", "", 8);
         }
     }
 
@@ -288,7 +389,6 @@ long add_file_stat(char *filepath)
     char *time = memalloc(20 * sizeof(char));
     /* format last modified time to a string */
     strftime(time, 20, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
-    
     
     /* get file size */
     double bytes = file_stat.st_size;
@@ -298,7 +398,7 @@ long add_file_stat(char *filepath)
         nftw(filepath, &get_directory_size, 15, FTW_PHYS);
         bytes = total_dir_size;
     }
-    /* max 25 chars due to long, space, suffix and nul */
+    /* max 25 chars due to long, space, suffix and null */
     char *size = memalloc(25 * sizeof(char));
     int unit = 0;
     const char* units[] = {"  B", "KiB", "MiB", "GiB", "TiB", "PiB"};
@@ -309,25 +409,42 @@ long add_file_stat(char *filepath)
     /* 4 sig fig, limiting characters to have better format  */
     sprintf(size, "%-6.4g %-3s", bytes, units[unit]);
     
-    /* get file type */
-    char *type = memalloc(4 * sizeof(char)); /* 3 chars for type */
+    /* get file type and color */
+    char *type = memalloc(4 * sizeof(char));    /* 4 chars for type */
+    int color;
     if (S_ISDIR(file_stat.st_mode)) {
-        strcpy(type, "DIR"); /* directory */
+        strcpy(type, "DIR");        /* directory type */
+        color = 5;                 /* blue color */
     } else if (S_ISREG(file_stat.st_mode)) {
-        strcpy(type, "REG"); /* regular file */
+        strcpy(type, "REG");        /* regular file */
+        color = 8;                 /* white color */
     } else if (S_ISLNK(file_stat.st_mode)) {
-        strcpy(type, "LNK"); /* symbolic link */
+        strcpy(type, "LNK");        /* symbolic link */
+        color = 3;                 /* green color */
     } else if (S_ISCHR(file_stat.st_mode)) {
-        strcpy(type, "CHR"); /* character device */
+        strcpy(type, "CHR");        /* character device */
+        color = 8;                 /* white color */
     } else if (S_ISSOCK(file_stat.st_mode)) {
-        strcpy(type, "SOC"); /* socket */
+        strcpy(type, "SOC");        /* socket */
+        color = 8;                 /* white color */
     } else if (S_ISBLK(file_stat.st_mode)) {
-        strcpy(type, "BLK"); /* block device */
+        strcpy(type, "BLK");        /* block device */
+        color = 4;                 /* yellow color */
     } else if (S_ISFIFO(file_stat.st_mode)) {
-        strcpy(type, "FIF"); /* FIFO */
+        strcpy(type, "FIF");        /* FIFO */
+        color = 8;                 /* white color */
+    } else {
+        color = 8;                 /* white color */
     }
     /* don't know how to handle socket, block device, character device and FIFO */
 
+    if (ftype == 1) {
+        long index = add_marked(filepath, type);
+        free(type);
+        free(size);
+        free(time);
+        return index;
+    }
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
     total_stat[strlen(total_stat)] = '\0';
@@ -335,12 +452,13 @@ long add_file_stat(char *filepath)
     free(time);
     free(size);
     
-    long index = add_file(filepath, total_stat, type);
+    long index = add_file(filepath, total_stat, type, color);
 
     free(total_stat);
     free(type);
     return index;
 }
+
 
 /*
  * Highlight current line by reversing the color
@@ -355,6 +473,13 @@ void highlight_current_line()
 
     /* calculate range of files to show */
     long range = files_len();
+    /* not highlight if no files in directory */
+    if (range == 0) {
+        wprintw(preview_content, "empty directory");
+        wrefresh(preview_content);
+        return;
+    }
+
     if (range > LINES - 3) {
         /* if there is more files than lines available to display*/
         /* shrink range to avaiable lines to display */
@@ -367,20 +492,34 @@ void highlight_current_line()
     for (long i = overflow; i < range; i++) {
         if ((overflow == 0 && i == current_selection) || (overflow != 0 && i == current_selection)) {
             wattron(directory_content, A_REVERSE);
-            wattron(directory_content, COLOR_PAIR(1));
 
             /* update the panel */
             wclear(panel);
-            wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
+            long num_marked = marked_len();
+            if (num_marked > 0) {
+                /* Determine length of formatted string */
+                int m_len = snprintf(NULL, 0, "(%ld selected)", num_marked);
+                char *selected = memalloc((m_len + 1) * sizeof(char));
+
+                snprintf(selected, m_len + 1, "(%ld selected)", num_marked);
+                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
+            } else  {
+                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
+            }
         }
         /* print the actual filename and stats */
         char *line = get_line(i);
+        int color = get_color(i);
+
+        /* print the whole directory with colors */
+        wattron(directory_content, COLOR_PAIR(color));
         if (overflow > 0)
             mvwprintw(directory_content, line_count, 0, "%s", line);
         else
             mvwprintw(directory_content, i, 0, "%s", line);
+
         wattroff(directory_content, A_REVERSE);
-        wattroff(directory_content, COLOR_PAIR(1));
+        wattroff(directory_content, COLOR_PAIR(color));
         free(line);
         line_count++;
     }
@@ -426,9 +565,7 @@ void edit_file()
 {
     char *editor = getenv("EDITOR");
     if (editor == NULL) {
-        wclear(panel);
-        wprintw(panel, "Cannot get EDITOR variable, is it defined?");
-        wrefresh(panel);
+        wpprintw("Cannot get EDITOR variable, is it defined?");
         return;
     } else {
         def_prog_mode(); /* save the tty modes */
@@ -442,6 +579,16 @@ void edit_file()
         refresh(); /* store the screen contents */
         free(filename);
     }
+}
+
+/*
+ * Print line to panel
+ */
+void wpprintw(const char *line)
+{
+    wclear(panel);
+    wprintw(panel, "%s", line);
+    wrefresh(panel);
 }
 
 void init_windows()
@@ -482,9 +629,9 @@ void draw_border_title(WINDOW *window, bool active)
 {
     /* turn on color depends on active */
     if (active) {
-        wattron(window, COLOR_PAIR(2));
+        wattron(window, COLOR_PAIR(7));
     } else {
-        wattron(window, COLOR_PAIR(1));
+        wattron(window, COLOR_PAIR(5));
     }
     /* draw top border */
     mvwaddch(window, 0, 0, ACS_ULCORNER);  /* upper left corner */
@@ -503,9 +650,9 @@ void draw_border_title(WINDOW *window, bool active)
 
     /* turn color off after turning it on */
     if (active) {
-        wattroff(window, COLOR_PAIR(2));
+        wattroff(window, COLOR_PAIR(7));
     } else {
-        wattroff(window, COLOR_PAIR(1));
+        wattroff(window, COLOR_PAIR(5));
     }
     wrefresh(window);  /* Refresh the window to see the colored border and title */
 }

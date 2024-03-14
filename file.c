@@ -9,7 +9,7 @@ typedef struct file {
     char *path;
     char *stats;
     char *type;
-    /* put some more useful stat here */
+    int color;
     struct file *next;
 } file;
 
@@ -65,22 +65,51 @@ void clear_marked()
     }
 }
 
-long add_file(char *filepath, char *stats, char *type)
+long add_file(char *filepath, char *stats, char *type, int color)
 {
     file *current = files;
     file *new_file = memalloc(sizeof(file));
     char *buf = strdup(filepath);
     char *buf2 = strdup(stats);
     char *buf3 = strdup(type);
-    if (buf == NULL || buf2 == NULL || buf3 == NULL) {
+    int buf4 = color;
+
+    if (buf == NULL || buf2 == NULL || buf3 == NULL)
         perror("ccc");
-    }
+
     new_file->path = buf;
     new_file->stats = buf2; 
     new_file->type = buf3;
+    new_file->color = buf4;
     new_file->next = NULL;
+
     if (current == NULL) {
         files = new_file;
+        return 0;
+    }
+    long index = 1;
+    while (current->next != NULL) {
+        current = current->next;
+        index++;
+    }
+    current->next = new_file;
+    return index;
+}
+
+long add_marked(char *filepath, char *type)
+{
+    file *current = marked;
+    file *new_file = memalloc(sizeof(file));
+    char *buf = strdup(filepath);
+    char *buf2 = strdup(type);
+    if (buf == NULL || buf2 == NULL) {
+        perror("ccc");
+    }
+    new_file->path = buf;
+    new_file->type = buf2;
+    new_file->next = NULL;
+    if (current == NULL) {
+        marked = new_file;
         return 0;
     }
     long index = 1;
@@ -121,6 +150,20 @@ char *get_filepath(long index)
     }
 }
 
+int get_color(long index)
+{
+    file *file = get_file(index);
+    if (file != NULL) {
+        int color = file->color;
+        if (!color) {
+            perror("ccc");
+        }
+        return color;
+    } else {
+        return 8;       /* white */
+    }
+}
+
 /*
  * Construct a formatted line for display
  */
@@ -129,14 +172,16 @@ char *get_line(long index)
     file *file = get_file(index);
     if (file != NULL) {
         char *name = strdup(file->path);
-        name = basename(name);
         char *stats = strdup(file->stats);
-        if (name == NULL || stats == NULL) {
-            perror("ccc");
-        }
-        size_t length = strlen(name) + strlen(stats) + 2; /* one for space and one for nul */
+        size_t length = strlen(name) + strlen(stats) + 2;   /* one for space and one for null */
         char *line = memalloc(length * sizeof(char));
+
+        name = basename(name);
+        if (name == NULL || stats == NULL)
+            perror("ccc");
+
         snprintf(line, length, "%s %s", stats, name);
+
         return line;
     } else {
         return NULL;
