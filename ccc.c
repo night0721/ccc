@@ -489,7 +489,6 @@ void highlight_current_line()
     for (long i = overflow; i < range; i++) {
         if ((overflow == 0 && i == current_selection) || (overflow != 0 && i == current_selection)) {
             wattron(directory_content, A_REVERSE);
-            wattron(directory_content, COLOR_PAIR(5));
 
             /* update the panel */
             wclear(panel);
@@ -508,7 +507,6 @@ void highlight_current_line()
 
         wattroff(directory_content, A_REVERSE);
         wattroff(directory_content, COLOR_PAIR(color));
-        wattroff(directory_content, COLOR_PAIR(5));
         free(line);
         line_count++;
     }
