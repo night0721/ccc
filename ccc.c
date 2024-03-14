@@ -24,6 +24,7 @@ typedef struct {
 } WIN_STRUCT;
 
 /* functions' definitions */
+void change_dir();
 void list_files(const char *path);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 long add_file_stat(char *filename);
@@ -57,7 +58,8 @@ int main(int argc, char** argv)
         die("ccc: No tty detected. ccc requires an interactive shell to run.\n");
 
     /* initialize screen, don't print special chars,
-     * make ctrl + c work, don't show cursor */
+     * make ctrl + c work, don't show cursor 
+     * enable arrow keys */
     initscr();
     noecho();
     cbreak();
@@ -96,7 +98,7 @@ int main(int argc, char** argv)
             die("ccc: Terminal size needs to be at least 80x24\n");
         }
         ch = getch();
-        printf("%d ",ch);
+        /* printf("%d ",ch); */
         switch (ch) {
             /* quit */
             case 'q':
@@ -105,24 +107,18 @@ int main(int argc, char** argv)
 
             /* reload */
             case '.':
-                clear_files();
-                list_files(cwd);
-                current_selection = 0;
-                highlight_current_line();
+                change_dir(); 
                 break;
 
             /* go back by backspace or h or left arrow */
             case 127:
             case 260:
-            case 'h':
-                clear_files();
+            case 'h':;
                 /* get parent directory */
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     *last_slash = '\0';
-                    list_files(cwd);
-                    current_selection = 0;
-                    highlight_current_line();
+                    change_dir();
                 }
                 break;
 
@@ -136,10 +132,7 @@ int main(int argc, char** argv)
                     if (strncmp(file->type, "DIR", 3) == 0) {
                         /* change cwd to directory */
                         strcpy(cwd, file->path);
-                        clear_files();
-                        list_files(cwd);
-                        current_selection = 0;
-                        highlight_current_line();
+                        change_dir(); 
                     } else if (strncmp(file->type, "REG", 3) == 0) {
                         edit_file();
                     }
@@ -208,6 +201,19 @@ int main(int argc, char** argv)
                 }
                 break;
 
+            /* ~ to go home */
+            case 126:;
+                char *home = getenv("HOME");
+                if (home == NULL) {
+                    wclear(panel);
+                    wprintw(panel, "$HOME is not defined");
+                    wrefresh(panel);
+                } else {
+                    strcpy(cwd, home);
+                    change_dir();
+                }
+                break;
+
             /* mark files by space */
             case 32:
                 ;
@@ -232,6 +238,17 @@ int main(int argc, char** argv)
     clear_marked();
     endwin();
     return 0;
+}
+
+/*
+ * change directory in window
+ */
+void change_dir()
+{
+    clear_files();
+    list_files(cwd);
+    current_selection = 0;
+    highlight_current_line();
 }
 
 /*
