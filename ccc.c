@@ -265,8 +265,7 @@ int main(int argc, char** argv)
 }
 
 /*
-<<<<<<< HEAD
- * change directory in window
+ * Change directory in window
  */
 void change_dir(const char *buf)
 {
