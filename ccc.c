@@ -107,7 +107,7 @@ int main(int argc, char** argv)
             die("ccc: Terminal size needs to be at least 80x24\n");
         }
         ch = getch();
-        printf("%d ",ch);
+        /* printf("%d ",ch); */
         switch (ch) {
             /* quit */
             case 'q':
@@ -241,6 +241,7 @@ int main(int argc, char** argv)
             /* mark files by space */
             case SPACE:
                 add_file_stat(get_filepath(current_selection), 1);
+                highlight_current_line();
                 break;
             
             /* escape */
@@ -496,13 +497,15 @@ void highlight_current_line()
             wclear(panel);
             long num_marked = marked_len();
             if (num_marked > 0) {
-                /* largest long is 2147483647, 10 characters
-                 * (x selected), 11 characters */
-                char *selected = memalloc(21 * sizeof(char));
-                snprintf(selected, 21, "(selected )", num_marked);
+                /* Determine length of formatted string */
+                int m_len = snprintf(NULL, 0, "(%ld selected)", num_marked);
+                char *selected = memalloc((m_len + 1) * sizeof(char));
+
+                snprintf(selected, m_len + 1, "(%ld selected)", num_marked);
                 wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
+            } else  {
+                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
             }
-            wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
         }
         /* print the actual filename and stats */
         char *line = get_line(i);
