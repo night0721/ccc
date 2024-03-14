@@ -24,13 +24,15 @@ typedef struct {
 } WIN_STRUCT;
 
 /* functions' definitions */
-void change_dir();
+void change_dir(const char *buf);
+int mkdir_p(const char *destdir);
 void list_files(const char *path);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 long add_file_stat(char *filename);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
+void wpprintw(const char *line);
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
 
@@ -105,9 +107,9 @@ int main(int argc, char** argv)
                 endwin();
                 return 0;
 
-            /* reload */
-            case '.':
-                change_dir(); 
+            /* reload using z */
+            case 'z':
+                change_dir(cwd); 
                 break;
 
             /* go back by backspace or h or left arrow */
@@ -118,7 +120,7 @@ int main(int argc, char** argv)
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     *last_slash = '\0';
-                    change_dir();
+                    change_dir(cwd);
                 }
                 break;
 
@@ -131,8 +133,7 @@ int main(int argc, char** argv)
                     /* check if it is directory or regular file */
                     if (strncmp(file->type, "DIR", 3) == 0) {
                         /* change cwd to directory */
-                        strcpy(cwd, file->path);
-                        change_dir(); 
+                        change_dir(file->path); 
                     } else if (strncmp(file->type, "REG", 3) == 0) {
                         edit_file();
                     }
@@ -205,12 +206,28 @@ int main(int argc, char** argv)
             case 126:;
                 char *home = getenv("HOME");
                 if (home == NULL) {
-                    wclear(panel);
-                    wprintw(panel, "$HOME is not defined");
-                    wrefresh(panel);
+                    wpprintw("$HOME is not defined");
                 } else {
-                    strcpy(cwd, home);
-                    change_dir();
+                    change_dir(home);
+                }
+                break;
+
+            /* t to go to trash dir */
+            case 't':;
+                char *trash_dir = getenv("CCC_TRASH");
+                if (trash_dir == NULL) {
+                    wpprintw("$CCC_TRASH is not defined");
+                } else {
+                    if (access(trash_dir, F_OK) != 0) {
+                        /* create the directory with 755 perm if it doesn't exit */
+                        if (mkdir_p(trash_dir) == -1) {
+                            switch (errno) {
+                                case EACCES:
+                                    wpprintw("Parent directory does not allow write permission or one of directory does not allow search access");
+                            }
+                        }
+                    }
+                    change_dir(trash_dir);
                 }
                 break;
 
@@ -243,12 +260,61 @@ int main(int argc, char** argv)
 /*
  * change directory in window
  */
-void change_dir()
+void change_dir(const char *buf)
 {
+    strcpy(cwd, buf);
     clear_files();
     list_files(cwd);
     current_selection = 0;
     highlight_current_line();
+}
+
+/*
+ * Recursively create directory by creating each subdirectory
+ */
+int mkdir_p(const char *destdir)
+{
+    char *path = memalloc(PATH_MAX * sizeof(char));
+    strcpy(path, destdir);
+    if (destdir[0] == '~') {
+        char *home = getenv("HOME");
+        if (home == NULL) {
+            wpprintw("$HOME is not defined");
+            return -1;
+        }
+        /* replace ~ with home */
+        memmove(path + strlen(home), path + 1, strlen(path));
+        memcpy(path, home, strlen(home));
+    }
+    char *token = strtok(path, "/");
+    char dir_path[PATH_MAX] = "";
+
+    /* fix first / is not appearing in string */
+    if (path[0] == '/') {
+        strcat(dir_path, "/");
+    }
+
+    while (token != NULL) {
+        strcat(dir_path, token);
+        strcat(dir_path, "/");
+
+        if (mkdir(dir_path, 0755) == -1) {
+            struct stat st;
+            if (stat(dir_path, &st) == 0 && S_ISDIR(st.st_mode)) {
+                /* Directory already exists, continue to the next dir */
+                token = strtok(NULL, "/");
+                continue;
+            }
+            
+            perror("ccc");
+            free(path);
+            return -1;
+        }
+        token = strtok(NULL, "/");
+    }
+
+    free(path);
+    return 0;
 }
 
 /*
@@ -387,6 +453,13 @@ void highlight_current_line()
 
     /* calculate range of files to show */
     long range = files_len();
+    /* not highlight if no files in directory */
+    if (range == 0) {
+        wprintw(preview_content, "empty directory");
+        wrefresh(preview_content);
+        return;
+    }
+
     if (range > LINES - 3) {
         /* if there is more files than lines available to display*/
         /* shrink range to avaiable lines to display */
@@ -458,9 +531,7 @@ void edit_file()
 {
     char *editor = getenv("EDITOR");
     if (editor == NULL) {
-        wclear(panel);
-        wprintw(panel, "Cannot get EDITOR variable, is it defined?");
-        wrefresh(panel);
+        wpprintw("Cannot get EDITOR variable, is it defined?");
         return;
     } else {
         def_prog_mode(); /* save the tty modes */
@@ -474,6 +545,16 @@ void edit_file()
         refresh(); /* store the screen contents */
         free(filename);
     }
+}
+
+/*
+ * Print line to panel
+ */
+void wpprintw(const char *line)
+{
+    wclear(panel);
+    wprintw(panel, "%s", line);
+    wrefresh(panel);
 }
 
 void init_windows()
