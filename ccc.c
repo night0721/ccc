@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -5,15 +6,14 @@
 #include <linux/limits.h>
 #include <dirent.h>         /* directories etc. */
 #include <sys/stat.h>
+#include <errno.h>
+#include <ftw.h>
 #include <time.h>
 #include <ncurses.h>
 
 #include "file.h"
 #include "util.h"
-
-#define ESC 0x1B    /* \e or \033 */
-#define PH 1        /* panel height */
-#define JUMP_NUM 14 /* how long ctrl + u/d jump are */
+#include "config.h"
 
 typedef struct {
     WINDOW *window;
@@ -24,7 +24,7 @@ typedef struct {
 
 /* functions' definitions */
 void list_files(const char *path);
-long long get_directory_size(const char *path);
+int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 long add_file_stat(char *filename);
 void highlight_current_line();
 void show_file_content();
@@ -43,6 +43,8 @@ WINDOW *directory_content;
 WINDOW *preview_border;
 WINDOW *preview_content;
 WINDOW *panel;
+
+unsigned long total_dir_size;
 
 int main(int argc, char** argv)
 {
@@ -93,6 +95,7 @@ int main(int argc, char** argv)
         }
         ch = getch();
         switch (ch) {
+
             /* quit */
             case 'q':
                 endwin();
@@ -140,7 +143,7 @@ int main(int argc, char** argv)
                 break;
                 */
 
-            /* jump up */
+            /* jump up (ctrl u)*/
             case '\x15':
                 if ((current_selection - JUMP_NUM) > 0)
                     current_selection -= JUMP_NUM;
@@ -158,7 +161,7 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
-            /* jump down */
+            /* jump down (ctrl d)*/
             case '\x04':
                 if ((current_selection + JUMP_NUM) < (files_len() - 1))
                     current_selection += JUMP_NUM;
@@ -261,42 +264,10 @@ void list_files(const char *path)
     }
 }
 
-long long get_directory_size(const char *path)
+int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-    DIR *dp;
-    struct dirent *ep;
-    struct stat statbuf;
-    long long total_size = 0;
-
-    if ((dp = opendir(path)) != NULL) {
-        while ((ep = readdir(dp)) != NULL) {
-            if (strcmp(ep->d_name, ".") == 0 || strcmp(ep->d_name, "..") == 0) {
-                continue;
-            }
-            /* build full path of entry */
-            char full_path[PATH_MAX];
-            snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
-
-            if (lstat(full_path, &statbuf) == -1) {
-                perror("lstat");
-                closedir(dp);
-                return -1;
-            }
-            /* recursively calculate its size if it is directory */
-            if (S_ISDIR(statbuf.st_mode)) {
-                total_size += get_directory_size(full_path);
-            } else {
-                /* else add the size of the file to the total */
-                total_size += statbuf.st_size;
-            }
-        }
-        closedir(dp);
-    } else {
-        perror("ccc");
-        return -1;
-    }
-
-    return total_size;
+    total_dir_size += sb->st_size;
+    return 0;
 }
 
 /*
@@ -306,7 +277,12 @@ long long get_directory_size(const char *path)
 long add_file_stat(char *filepath)
 {
     struct stat file_stat;
-    stat(filepath, &file_stat);
+    if (stat(filepath, &file_stat) == -1) {
+        /* can't be triggered ? */
+        if (errno == EACCES) {
+            return add_file(filepath, "", "");
+        }
+    }
 
     /* get last modified time */
     char *time = memalloc(20 * sizeof(char));
@@ -317,17 +293,21 @@ long add_file_stat(char *filepath)
     /* get file size */
     double bytes = file_stat.st_size;
     if (S_ISDIR(file_stat.st_mode)) {
-        bytes = (double) get_directory_size(filepath);
+        /* at most 15 fd opened */
+        total_dir_size = 0;
+        nftw(filepath, &get_directory_size, 15, FTW_PHYS);
+        bytes = total_dir_size;
     }
     /* max 25 chars due to long, space, suffix and nul */
     char *size = memalloc(25 * sizeof(char));
     int unit = 0;
-    const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
+    const char* units[] = {"  B", "KiB", "MiB", "GiB", "TiB", "PiB"};
     while (bytes > 1024) {
         bytes /= 1024;
         unit++;
     }
-    sprintf(size, "%.*f%s", unit, bytes, units[unit]);
+    /* 4 sig fig, limiting characters to have better format  */
+    sprintf(size, "%-6.4g %-3s", bytes, units[unit]);
     
     /* get file type */
     char *type = memalloc(4 * sizeof(char)); /* 3 chars for type */
@@ -409,6 +389,7 @@ void highlight_current_line()
     wrefresh(panel);
     /* show file content every time cursor changes */
     show_file_content();
+    wrefresh(preview_content);
 }
 
 /*
@@ -416,11 +397,12 @@ void highlight_current_line()
  */
 void show_file_content()
 {
-    FILE *file = fopen(get_filepath((long) current_selection), "rb");
+    wclear(preview_content);
+    file *current_file = get_file((long) current_selection);
+    if (strncmp(current_file->type, "DIR", 3) == 0) return;
+    FILE *file = fopen(current_file->path, "rb");
     if (file) {
-        wclear(preview_content);
         draw_border_title(preview_border, true);
-
         fseek(file, 0, SEEK_END);
         long length = ftell(file);
         /* check if file isn't empty */
@@ -429,7 +411,6 @@ void show_file_content()
             char *buffer = memalloc(length * sizeof(char));
             fread(buffer, 1, length, file);
             mvwprintw(preview_content, 0, 0, "%s", buffer);
-            wrefresh(preview_content);
             free(buffer);
         } else {
             wclear(preview_content);
@@ -486,7 +467,6 @@ void init_windows()
     draw_border_title(preview_border,   false);
 
     scrollok(directory_content, true);
-    scrollok(preview_content, true);
     /*                          window             location  y,            x           */
     windows[0] = (WIN_STRUCT) { directory_border,         0,        0,            0              };
     windows[1] = (WIN_STRUCT) { directory_border,         0,        0,            0              };
