@@ -18,7 +18,6 @@ SRC = ccc.c util.c file.c $(CONF)
 
 $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC) -o $@
-	strip $(TARGET)
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)

@@ -84,7 +84,7 @@ int main(int argc, char** argv)
     init_pair(4, COLOR_YELLOW, -1);     /* BLK */
     init_pair(5, COLOR_BLUE, -1);       /* DIR */ 
     init_pair(6, COLOR_MAGENTA, -1);    /*  */
-    init_pair(7, COLOR_CYAN, -1);       /*  */
+    init_pair(7, COLOR_CYAN, -1);       /* MARKED FILES */
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     half_width = COLS / 2;
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
                 break;
 
             /* mark files by space */
-            case SPACE:
+            case SPACE:;
                 add_file_stat(get_filepath(current_selection), 1);
                 highlight_current_line();
                 break;
@@ -440,13 +440,17 @@ long add_file_stat(char *filepath, int ftype)
 
     if (ftype == 1) {
         long index = add_marked(filepath, type);
-        if (index == -1) {
-            
-        }
         free(type);
         free(size);
         free(time);
-        return index;
+        if (index != -1) {
+            /* just marked */
+            return index;    
+        }
+        /* already marked */
+        return -1;
+        /* -1 does nothing, just function required to return something */
+
     }
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
@@ -513,16 +517,28 @@ void highlight_current_line()
         /* print the actual filename and stats */
         char *line = get_line(i);
         int color = get_color(i);
-
-        /* print the whole directory with colors */
-        wattron(directory_content, COLOR_PAIR(color));
+        /* check is file marked for action */
+        bool marked = in_marked(get_filepath(i));
+        if (marked) {
+            /* show file is selected */
+            wattron(directory_content, COLOR_PAIR(7));
+        } else {
+            /* print the whole directory with default colors */
+            wattron(directory_content, COLOR_PAIR(color));
+        }
+        
         if (overflow > 0)
             mvwprintw(directory_content, line_count, 0, "%s", line);
         else
             mvwprintw(directory_content, i, 0, "%s", line);
 
+        if (marked) {
+            wattroff(directory_content, COLOR_PAIR(7));
+        } else {
+            wattroff(directory_content, COLOR_PAIR(color));
+        }
+
         wattroff(directory_content, A_REVERSE);
-        wattroff(directory_content, COLOR_PAIR(color));
         free(line);
         line_count++;
     }

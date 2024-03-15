@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <libgen.h>
 
 #include "util.h"
@@ -45,13 +46,24 @@ long marked_len()
 
 }
 
+void free_file(file *toremove)
+{
+    if (toremove->type != NULL)
+        free(toremove->type);
+    if (toremove->path != NULL)
+        free(toremove->path);
+    if (toremove->stats != NULL)
+        free(toremove->stats);
+    free(toremove);
+}
+
 void clear_files()
 {
     file *tmp;
     while (files != NULL) {
         tmp = files;
         files = files->next;
-        free(tmp);
+        free_file(tmp);
     }
 }
 
@@ -61,7 +73,7 @@ void clear_marked()
     while (marked != NULL) {
         tmp = marked;
         files = marked->next;
-        free(tmp);
+        free_file(tmp);
     }
 }
 
@@ -96,6 +108,29 @@ long add_file(char *filepath, char *stats, char *type, int color)
     return index;
 }
 
+void remove_marked(file *marked_file)
+{
+    /* If the head node itself is marked for removal */
+    if (marked == marked_file) {
+        marked = marked->next;
+        free_file(marked_file);
+        return;
+    }
+    
+
+    /* Search for the marked file node in the list */
+    file* temp = marked;
+    while (temp != NULL && temp->next != marked_file) {
+        temp = temp->next;
+    }
+
+    /* If the marked file node is found, remove it from the list */
+    if (temp != NULL) {
+        temp->next = marked_file->next;
+        free_file(marked_file);
+    }
+}
+
 long add_marked(char *filepath, char *type)
 {
     file *current = marked;
@@ -107,18 +142,61 @@ long add_marked(char *filepath, char *type)
     }
     new_file->path = buf;
     new_file->type = buf2;
+    new_file->stats = NULL;
+    new_file->color = 0;
     new_file->next = NULL;
     if (current == NULL) {
         marked = new_file;
         return 0;
     }
+    
     long index = 1;
     while (current->next != NULL) {
+        if (strcmp(current->path, new_file->path) == 0) {
+            remove_marked(current);
+            free_file(new_file);
+            return -1;
+        }
         current = current->next;
         index++;
     }
+    if (strcmp(current->path, new_file->path) == 0){
+        remove_marked(current);
+        free_file(new_file);
+        return -1;
+    }
     current->next = new_file;
     return index;
+}
+
+file *get_marked(long index)
+{
+    file *current = marked;
+    if (index == 0) {
+        return current;
+    }
+    if (index > files_len()) {
+        return NULL;
+    }
+    for (long i = 0; i < index; i++) {
+        current = current->next;
+    }
+    return current;
+}
+
+bool in_marked(char *path)
+{
+    file *tmp = marked;
+    if (tmp == NULL)
+        return false;
+
+    while (tmp != NULL) {
+        if (strcmp(path, tmp->path) == 0) {
+            return true;
+        }
+        tmp = tmp->next;
+    }
+    return false;
 }
 
 file *get_file(long index)
@@ -160,7 +238,7 @@ int get_color(long index)
         }
         return color;
     } else {
-        return 8;       /* white */
+        return 8; /* white */
     }
 }
 
