@@ -1,26 +1,31 @@
 .POSIX:
 .SUFFIXES:
 
+CC = cc
+VERSION = 1.0
 TARGET = ccc
 MANPAGE = ccc.1
-SRC = ccc.c util.c file.c config.h
+CONF = config.h
+PREFIX ?= /usr/local
+BINDIR = $(PREFIX)/bin
+MANDIR = $(PREFIX)/share/man/man1
 
 # Flags
 LDFLAGS = $(shell pkg-config --libs ncurses)
 CFLAGS = -march=native -mtune=native -O3 -pipe -s -std=c99 -pedantic $(shell pkg-config --cflags ncurses) -Wall # -Wextra -Werror
-CC=cc
-PREFIX ?= /usr/local
-CONF = config.h
 
-BINDIR = $(PREFIX)/bin
-MANDIR = $(PREFIX)/share/man/man1
-
-.PHONY: all install uninstall clean
+SRC = ccc.c util.c file.c $(CONF)
 
 $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC) -o $@
+	strip $(TARGET)
 
-all: $(TARGET)
+dist:
+	mkdir -p $(TARGET)-$(VERSION)
+	cp -R README.md $(MANPAGE) $(TARGET) $(TARGET)-$(VERSION)
+	tar -cf $(TARGET)-$(VERSION).tar $(TARGET)-$(VERSION)
+	gzip $(TARGET)-$(VERSION).tar
+	rm -rf $(TARGET)-$(VERSION)
 
 install: $(TARGET)
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -36,3 +41,7 @@ uninstall:
 
 clean:
 	$(RM) $(TARGET)
+
+all: $(TARGET)
+
+.PHONY: all dist install uninstall clean
