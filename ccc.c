@@ -440,6 +440,9 @@ long add_file_stat(char *filepath, int ftype)
 
     if (ftype == 1) {
         long index = add_marked(filepath, type);
+        if (index == -1) {
+            
+        }
         free(type);
         free(size);
         free(time);
@@ -539,23 +542,36 @@ void show_file_content()
     wclear(preview_content);
     file *current_file = get_file((long) current_selection);
     if (strncmp(current_file->type, "DIR", 3) == 0) return;
-    FILE *file = fopen(current_file->path, "rb");
-    if (file) {
-        draw_border_title(preview_border, true);
-        fseek(file, 0, SEEK_END);
-        long length = ftell(file);
-        /* check if file isn't empty */
-        if (length != 0 && length < 4096) {
-            fseek(file, 0, SEEK_SET); /* set cursor back to start of file */
-            char *buffer = memalloc(length * sizeof(char));
-            fread(buffer, 1, length, file);
-            mvwprintw(preview_content, 0, 0, "%s", buffer);
-            free(buffer);
-        } else {
-            wclear(preview_content);
-        }
-        fclose(file);
+    FILE *file = fopen(current_file->path, "r");
+    if (file == NULL) {
+        mvwprintw(preview_content, 0, 0, "Unable to read %s", current_file->path);
+        return;
     }
+    draw_border_title(preview_border, true);
+
+    int c;
+    /* check binary */
+    while ((c=fgetc(file)) != EOF) {
+        if (c == '\0') {
+            mvwprintw(preview_content, 0, 0, "binary");
+            return;
+        }
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    /* check if file isn't empty */
+    if (length != 0) {
+        fseek(file, 0, SEEK_SET); /* set cursor back to start of file */
+        int max_length = (LINES - 3) * (COLS / 2 - 2);
+        char *buffer = memalloc(max_length * sizeof(char));
+        fread(buffer, 1, max_length, file);
+        mvwprintw(preview_content, 0, 0, "%s", buffer);
+        free(buffer);
+    } else {
+        wclear(preview_content);
+    }
+    fclose(file);
 }
 
 /*
@@ -611,7 +627,7 @@ void init_windows()
     
     /* draw border around windows     */
     draw_border_title(directory_border,  true);
-    draw_border_title(preview_border,   false);
+    draw_border_title(preview_border,   true);
 
     scrollok(directory_content, true);
     /*                          window             location  y,            x           */
