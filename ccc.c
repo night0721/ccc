@@ -26,7 +26,7 @@ typedef struct {
 /* functions' definitions */
 void change_dir(const char *buf);
 int mkdir_p(const char *destdir);
-void populate_files(const char *path);
+void populate_files(const char *path, int ftype);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 long add_file_stat(char *filepath, int ftype);
 void highlight_current_line();
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
 
-    populate_files(cwd);
+    populate_files(cwd, 0);
     highlight_current_line();
 
     /* set window name */
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
             case 'l':;
                 file *file = get_file(current_selection);
                 if (file != NULL) {
-                    /* check if it is directory or regular file */
+                    /* check if it is directory or a regular file */
                     if (strncmp(file->type, "DIR", 3) == 0) {
                         /* change cwd to directory */
                         change_dir(file->path); 
@@ -238,14 +238,20 @@ int main(int argc, char** argv)
             case 'v':
                 dirs_size = !dirs_size;
                 clear_files();
-                populate_files(cwd);
+                populate_files(cwd, 0);
                 highlight_current_line();
                 break;
 
-            /* mark files by space */
+            /* mark one file */
             case SPACE:;
                 add_file_stat(get_filepath(current_selection), 1);
                 highlight_current_line();
+                break;
+
+            /* mark all files in directory */
+            case 'a':;
+                populate_files(cwd, 1);
+                change_dir(cwd);        /* reload current dir */
                 break;
             
             /* escape */
@@ -276,7 +282,7 @@ void change_dir(const char *buf)
 {
     strcpy(cwd, buf);
     clear_files();
-    populate_files(cwd);
+    populate_files(cwd, 0);
     current_selection = 0;
     highlight_current_line();
 }
@@ -332,7 +338,7 @@ int mkdir_p(const char *destdir)
  * Read the provided directory and add all files in directory to linked list
  * ep->d_name -> filename
  */
-void populate_files(const char *path)
+void populate_files(const char *path, int ftype)
 {
     DIR *dp;
     struct dirent *ep;
@@ -356,7 +362,7 @@ void populate_files(const char *path)
                 strcat(filename, "/");
                 strcat(filename, ep->d_name);   /* add filename */
 
-                add_file_stat(filename, 0);
+                add_file_stat(filename, ftype);
             }
             free(filename);
         }
@@ -508,10 +514,10 @@ void highlight_current_line()
             long num_marked = marked_len();
             if (num_marked > 0) {
                 /* Determine length of formatted string */
-                int m_len = snprintf(NULL, 0, "(%ld selected)", num_marked);
+                int m_len = snprintf(NULL, 0, "[%ld] selected", num_marked);
                 char *selected = memalloc((m_len + 1) * sizeof(char));
 
-                snprintf(selected, m_len + 1, "(%ld selected)", num_marked);
+                snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
                 wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
             } else  {
                 wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
