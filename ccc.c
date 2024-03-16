@@ -24,7 +24,7 @@ typedef struct {
 } WIN_STRUCT;
 
 /* functions' definitions */
-void change_dir(const char *buf);
+void change_dir(const char *buf, int selection);
 int mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
@@ -98,9 +98,6 @@ int main(int argc, char** argv)
     populate_files(cwd, 0);
     highlight_current_line();
 
-    /* set window name */
-    printf("%c]2;ccc: %s%c", ESC, cwd, ESC);
-
     int ch, ch2;
     while (1) {
         if (COLS < 80 || LINES < 24) {
@@ -117,7 +114,7 @@ int main(int argc, char** argv)
 
             /* reload using z */
             case 'z':
-                change_dir(cwd); 
+                change_dir(cwd, 0); 
                 break;
 
             /* go back by backspace or h or left arrow */
@@ -128,7 +125,7 @@ int main(int argc, char** argv)
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     *last_slash = '\0';
-                    change_dir(cwd);
+                    change_dir(cwd, 0);
                 }
                 break;
 
@@ -141,7 +138,7 @@ int main(int argc, char** argv)
                     /* check if it is directory or a regular file */
                     if (strncmp(file->type, "DIR", 3) == 0) {
                         /* change cwd to directory */
-                        change_dir(file->path); 
+                        change_dir(file->path, 0); 
                     } else if (strncmp(file->type, "REG", 3) == 0) {
                         edit_file();
                     }
@@ -211,13 +208,17 @@ int main(int argc, char** argv)
                 if (home == NULL) {
                     wpprintw("$HOME is not defined");
                 } else {
-                    change_dir(home);
+                    change_dir(home, 0);
                 }
                 break;
 
             /* go to the trash dir */
             case 't':;
-                char *trash_dir = getenv("CCC_TRASH");
+                #ifdef TRASH_DIR
+                    char *trash_dir = TRASH_DIR;
+                #else
+                    char *trash_dir = getenv("CCC_TRASH");
+                #endif
                 if (trash_dir == NULL) {
                     wpprintw("$CCC_TRASH is not defined");
                 } else {
@@ -226,16 +227,16 @@ int main(int argc, char** argv)
                         if (mkdir_p(trash_dir) == -1) {
                             switch (errno) {
                                 case EACCES:
-                                    wpprintw("Parent directory does not allow write permission or one of directory does not allow search access");
+                                    wpprintw("Parent directory does not allow write permission or one of directories does not allow search access");
                             }
                         }
                     }
-                    change_dir(trash_dir);
+                    change_dir(trash_dir, 0);
                 }
                 break;
 
             /* show directories' sizes */
-            case 'v':
+            case 'A':
                 dirs_size = !dirs_size;
                 clear_files();
                 populate_files(cwd, 0);
@@ -250,8 +251,9 @@ int main(int argc, char** argv)
 
             /* mark all files in directory */
             case 'a':;
+                int save_current_sel = current_selection;
                 populate_files(cwd, 1);
-                change_dir(cwd);        /* reload current dir */
+                change_dir(cwd, save_current_sel);      /* reload current dir */
                 break;
             
             /* escape */
@@ -276,14 +278,14 @@ int main(int argc, char** argv)
 }
 
 /*
- * Change directory in window
+ * Change directory in window with selection
  */
-void change_dir(const char *buf)
+void change_dir(const char *buf, int selection)
 {
     strcpy(cwd, buf);
     clear_files();
     populate_files(cwd, 0);
-    current_selection = 0;
+    current_selection = selection;
     highlight_current_line();
 }
 
@@ -336,6 +338,7 @@ int mkdir_p(const char *destdir)
 
 /*
  * Read the provided directory and add all files in directory to linked list
+ * ftype: normal files = 0, marked = 1
  * ep->d_name -> filename
  */
 void populate_files(const char *path, int ftype)
@@ -393,8 +396,8 @@ long add_file_stat(char *filepath, int ftype)
             return add_file(filepath, "", "", 8);
     }
     
-    /* get file type and color */
-    char *type = memalloc(4 * sizeof(char));    /* 4 chars for type */
+    /* get file type and color, 4 chars for the type */
+    char *type = memalloc(4 * sizeof(char));
     int color;
     if (S_ISDIR(file_stat.st_mode)) {
         strcpy(type, "DIR");            /* directory type */
