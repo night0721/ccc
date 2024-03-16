@@ -39,6 +39,7 @@ void draw_border_title(WINDOW *window, bool active);
 /* global variables */
 unsigned int focus = 0;
 long current_selection = 0;
+bool dir_mode = BLOCK_SIZE;
 char *cwd;
 int half_width;
 WIN_STRUCT windows[5];
@@ -238,6 +239,14 @@ int main(int argc, char** argv)
                 }
                 break;
 
+            /* a to toggle between DISK_USAGE and BLOCK SIZE */
+            case 'a':
+                dir_mode = !dir_mode;
+                clear_files();
+                populate_files(cwd);
+                highlight_current_line();
+                break;
+
             /* mark files by space */
             case SPACE:;
                 add_file_stat(get_filepath(current_selection), 1);
@@ -392,11 +401,15 @@ long add_file_stat(char *filepath, int ftype)
     
     /* get file size */
     double bytes = file_stat.st_size;
-    if (S_ISDIR(file_stat.st_mode)) {
-        /* at most 15 fd opened */
-        total_dir_size = 0;
-        nftw(filepath, &get_directory_size, 15, FTW_PHYS);
-        bytes = total_dir_size;
+    
+    if (!dir_mode) {
+        /* dir_mode is 0, so disk usage mode, calculate disk usage */
+        if (S_ISDIR(file_stat.st_mode)) {
+            /* at most 15 fd opened */
+            total_dir_size = 0;
+            nftw(filepath, &get_directory_size, 15, FTW_PHYS);
+            bytes = total_dir_size;
+        }
     }
     /* max 25 chars due to long, space, suffix and null */
     char *size = memalloc(25 * sizeof(char));
@@ -502,6 +515,15 @@ void highlight_current_line()
 
             /* update the panel */
             wclear(panel);
+            
+            /* showing dir_mode requires 26 characters */
+            char *dir_mode_line = memalloc(27 * sizeof(char));
+            if (dir_mode)
+                strncpy(dir_mode_line, "Directory Mode: Block Size", 27);
+            else
+                strncpy(dir_mode_line, "Directory Mode: Disk Usage", 27);
+
+            /* check for marked files */
             long num_marked = marked_len();
             if (num_marked > 0) {
                 /* Determine length of formatted string */
@@ -509,9 +531,9 @@ void highlight_current_line()
                 char *selected = memalloc((m_len + 1) * sizeof(char));
 
                 snprintf(selected, m_len + 1, "(%ld selected)", num_marked);
-                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
+                wprintw(panel, "(%ld/%ld) %s %s %s", current_selection + 1, files_len(), selected, cwd, dir_mode_line);
             } else  {
-                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
+                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), cwd, dir_mode_line);
             }
         }
         /* print the actual filename and stats */

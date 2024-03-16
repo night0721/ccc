@@ -11,5 +11,7 @@
 #define BACKSPACE 0x107
 #define PH 1            /* panel height */
 #define JUMP_NUM 14     /* how long ctrl + u/d jump are */
+#define BLOCK_SIZE true
+#define DISK_USAGE false
 
 static const char *editor = "nvim"; /* default text editor */
