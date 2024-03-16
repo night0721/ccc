@@ -147,11 +147,6 @@ int main(int argc, char** argv)
                     }
                 }
                 break;
-                /*
-                if (focus == 0) focus++;
-                else if (focus == 1) focus--;
-                break;
-                */
 
             /* jump up (ctrl u) */
             case CTRLU:
@@ -210,7 +205,7 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            /* ~ to go home */
+            /* go to $HOME */
             case TILDE:;
                 char *home = getenv("HOME");
                 if (home == NULL) {
@@ -220,7 +215,7 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            /* t to go to trash dir */
+            /* go to the trash dir */
             case 't':;
                 char *trash_dir = getenv("CCC_TRASH");
                 if (trash_dir == NULL) {
@@ -239,8 +234,8 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            /* a to toggle between DISK_USAGE and BLOCK SIZE */
-            case 'a':
+            /* show directories' sizes */
+            case 'v':
                 dirs_size = !dirs_size;
                 clear_files();
                 populate_files(cwd);
@@ -258,9 +253,9 @@ int main(int argc, char** argv)
                 break;
 
             case KEY_RESIZE:
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 2; i++)
                     delwin(windows[i].window);
-                }
+
                 endwin();
                 init_windows();
                 break;
@@ -387,9 +382,46 @@ long add_file_stat(char *filepath, int ftype)
 {
     struct stat file_stat;
     if (stat(filepath, &file_stat) == -1) {
-        /* can't be triggered ? */
-        if (errno == EACCES) {
+        /* can't be triggered? */
+        if (errno == EACCES)
             return add_file(filepath, "", "", 8);
+    }
+    
+    /* get file type and color */
+    char *type = memalloc(4 * sizeof(char));    /* 4 chars for type */
+    int color;
+    if (S_ISDIR(file_stat.st_mode)) {
+        strcpy(type, "DIR");            /* directory type */
+        color = 5;                      /* blue color */
+    } else if (S_ISREG(file_stat.st_mode)) {
+        strcpy(type, "REG");            /* regular file */
+        color = 8;                      /* white color */
+    } else if (S_ISLNK(file_stat.st_mode)) {
+        strcpy(type, "LNK");            /* symbolic link */
+        color = 3;                      /* green color */
+    } else if (S_ISCHR(file_stat.st_mode)) {
+        strcpy(type, "CHR");            /* character device */
+        color = 8;                      /* white color */
+    } else if (S_ISSOCK(file_stat.st_mode)) {
+        strcpy(type, "SOC");            /* socket */
+        color = 8;                      /* white color */
+    } else if (S_ISBLK(file_stat.st_mode)) {
+        strcpy(type, "BLK");            /* block device */
+        color = 4;                      /* yellow color */
+    } else if (S_ISFIFO(file_stat.st_mode)) {
+        strcpy(type, "FIF");            /* FIFO */
+        color = 8;                      /* white color */
+    } else {
+        color = 8;                      /* white color */
+    }
+
+    /* if file is to be marked */
+    if (ftype == 1) {
+        long index = add_marked(filepath, type);
+        if (index != -1) {
+            return index;   /* just marked */
+        } else {
+            return -1;      /* already marked */
         }
     }
 
@@ -420,50 +452,7 @@ long add_file_stat(char *filepath, int ftype)
     }
     /* 4 sig fig, limiting characters to have better format  */
     sprintf(size, "%-6.4g %-3s", bytes, units[unit]);
-    
-    /* get file type and color */
-    char *type = memalloc(4 * sizeof(char));    /* 4 chars for type */
-    int color;
-    if (S_ISDIR(file_stat.st_mode)) {
-        strcpy(type, "DIR");       /* directory type */
-        color = 5;                 /* blue color */
-    } else if (S_ISREG(file_stat.st_mode)) {
-        strcpy(type, "REG");       /* regular file */
-        color = 8;                 /* white color */
-    } else if (S_ISLNK(file_stat.st_mode)) {
-        strcpy(type, "LNK");       /* symbolic link */
-        color = 3;                 /* green color */
-    } else if (S_ISCHR(file_stat.st_mode)) {
-        strcpy(type, "CHR");       /* character device */
-        color = 8;                 /* white color */
-    } else if (S_ISSOCK(file_stat.st_mode)) {
-        strcpy(type, "SOC");       /* socket */
-        color = 8;                 /* white color */
-    } else if (S_ISBLK(file_stat.st_mode)) {
-        strcpy(type, "BLK");       /* block device */
-        color = 4;                 /* yellow color */
-    } else if (S_ISFIFO(file_stat.st_mode)) {
-        strcpy(type, "FIF");       /* FIFO */
-        color = 8;                 /* white color */
-    } else {
-        color = 8;                 /* white color */
-    }
-    /* don't know how to handle socket, block device, character device and FIFO */
 
-    if (ftype == 1) {
-        long index = add_marked(filepath, type);
-        free(type);
-        free(size);
-        free(time);
-        if (index != -1) {
-            /* just marked */
-            return index;    
-        }
-        /* already marked */
-        /* -1 does nothing, just function required to return something */
-        return -1;
-
-    }
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
     total_stat[strlen(total_stat)] = '\0';
