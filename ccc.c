@@ -39,6 +39,7 @@ void draw_border_title(WINDOW *window, bool active);
 /* global variables */
 unsigned int focus = 0;
 long current_selection = 0;
+bool dir_mode = BLOCK_SIZE;
 char *cwd;
 int half_width;
 WIN_STRUCT windows[5];
@@ -84,7 +85,7 @@ int main(int argc, char** argv)
     init_pair(4, COLOR_YELLOW, -1);     /* BLK */
     init_pair(5, COLOR_BLUE, -1);       /* DIR */ 
     init_pair(6, COLOR_MAGENTA, -1);    /*  */
-    init_pair(7, COLOR_CYAN, -1);       /*  */
+    init_pair(7, COLOR_CYAN, -1);       /* MARKED FILES */
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     half_width = COLS / 2;
@@ -238,8 +239,16 @@ int main(int argc, char** argv)
                 }
                 break;
 
+            /* a to toggle between DISK_USAGE and BLOCK SIZE */
+            case 'a':
+                dir_mode = !dir_mode;
+                clear_files();
+                populate_files(cwd);
+                highlight_current_line();
+                break;
+
             /* mark files by space */
-            case SPACE:
+            case SPACE:;
                 add_file_stat(get_filepath(current_selection), 1);
                 highlight_current_line();
                 break;
@@ -392,11 +401,15 @@ long add_file_stat(char *filepath, int ftype)
     
     /* get file size */
     double bytes = file_stat.st_size;
-    if (S_ISDIR(file_stat.st_mode)) {
-        /* at most 15 fd opened */
-        total_dir_size = 0;
-        nftw(filepath, &get_directory_size, 15, FTW_PHYS);
-        bytes = total_dir_size;
+    
+    if (!dir_mode) {
+        /* dir_mode is 0, so disk usage mode, calculate disk usage */
+        if (S_ISDIR(file_stat.st_mode)) {
+            /* at most 15 fd opened */
+            total_dir_size = 0;
+            nftw(filepath, &get_directory_size, 15, FTW_PHYS);
+            bytes = total_dir_size;
+        }
     }
     /* max 25 chars due to long, space, suffix and null */
     char *size = memalloc(25 * sizeof(char));
@@ -443,7 +456,14 @@ long add_file_stat(char *filepath, int ftype)
         free(type);
         free(size);
         free(time);
-        return index;
+        if (index != -1) {
+            /* just marked */
+            return index;    
+        }
+        /* already marked */
+        return -1;
+        /* -1 does nothing, just function required to return something */
+
     }
     char *total_stat = memalloc(45 * sizeof(char));
     snprintf(total_stat, 45, "%-18s %-10s", time, size);
@@ -495,6 +515,15 @@ void highlight_current_line()
 
             /* update the panel */
             wclear(panel);
+            
+            /* showing dir_mode requires 26 characters */
+            char *dir_mode_line = memalloc(27 * sizeof(char));
+            if (dir_mode)
+                strncpy(dir_mode_line, "Directory Mode: Block Size", 27);
+            else
+                strncpy(dir_mode_line, "Directory Mode: Disk Usage", 27);
+
+            /* check for marked files */
             long num_marked = marked_len();
             if (num_marked > 0) {
                 /* Determine length of formatted string */
@@ -502,24 +531,36 @@ void highlight_current_line()
                 char *selected = memalloc((m_len + 1) * sizeof(char));
 
                 snprintf(selected, m_len + 1, "(%ld selected)", num_marked);
-                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
+                wprintw(panel, "(%ld/%ld) %s %s %s", current_selection + 1, files_len(), selected, cwd, dir_mode_line);
             } else  {
-                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
+                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), cwd, dir_mode_line);
             }
         }
         /* print the actual filename and stats */
         char *line = get_line(i);
         int color = get_color(i);
-
-        /* print the whole directory with colors */
-        wattron(directory_content, COLOR_PAIR(color));
+        /* check is file marked for action */
+        bool marked = in_marked(get_filepath(i));
+        if (marked) {
+            /* show file is selected */
+            wattron(directory_content, COLOR_PAIR(7));
+        } else {
+            /* print the whole directory with default colors */
+            wattron(directory_content, COLOR_PAIR(color));
+        }
+        
         if (overflow > 0)
             mvwprintw(directory_content, line_count, 0, "%s", line);
         else
             mvwprintw(directory_content, i, 0, "%s", line);
 
+        if (marked) {
+            wattroff(directory_content, COLOR_PAIR(7));
+        } else {
+            wattroff(directory_content, COLOR_PAIR(color));
+        }
+
         wattroff(directory_content, A_REVERSE);
-        wattroff(directory_content, COLOR_PAIR(color));
         free(line);
         line_count++;
     }
@@ -539,23 +580,36 @@ void show_file_content()
     wclear(preview_content);
     file *current_file = get_file((long) current_selection);
     if (strncmp(current_file->type, "DIR", 3) == 0) return;
-    FILE *file = fopen(current_file->path, "rb");
-    if (file) {
-        draw_border_title(preview_border, true);
-        fseek(file, 0, SEEK_END);
-        long length = ftell(file);
-        /* check if file isn't empty */
-        if (length != 0 && length < 4096) {
-            fseek(file, 0, SEEK_SET); /* set cursor back to start of file */
-            char *buffer = memalloc(length * sizeof(char));
-            fread(buffer, 1, length, file);
-            mvwprintw(preview_content, 0, 0, "%s", buffer);
-            free(buffer);
-        } else {
-            wclear(preview_content);
-        }
-        fclose(file);
+    FILE *file = fopen(current_file->path, "r");
+    if (file == NULL) {
+        mvwprintw(preview_content, 0, 0, "Unable to read %s", current_file->path);
+        return;
     }
+    draw_border_title(preview_border, true);
+
+    int c;
+    /* check binary */
+    while ((c=fgetc(file)) != EOF) {
+        if (c == '\0') {
+            mvwprintw(preview_content, 0, 0, "binary");
+            return;
+        }
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    /* check if file isn't empty */
+    if (length != 0) {
+        fseek(file, 0, SEEK_SET); /* set cursor back to start of file */
+        int max_length = (LINES - 3) * (COLS / 2 - 2);
+        char *buffer = memalloc(max_length * sizeof(char));
+        fread(buffer, 1, max_length, file);
+        mvwprintw(preview_content, 0, 0, "%s", buffer);
+        free(buffer);
+    } else {
+        wclear(preview_content);
+    }
+    fclose(file);
 }
 
 /*
@@ -611,7 +665,7 @@ void init_windows()
     
     /* draw border around windows     */
     draw_border_title(directory_border,  true);
-    draw_border_title(preview_border,   false);
+    draw_border_title(preview_border,   true);
 
     scrollok(directory_content, true);
     /*                          window             location  y,            x           */
