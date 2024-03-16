@@ -6,9 +6,6 @@ The fact that it is written in C makes it more versatile and rapid, enabling us 
 
 ## Features
 
-- Vim-like key binding
-- File Preview
-
 Consider this project incomplete and WIP!
 
 | Feature                        | Ported | Dropped | Added |
