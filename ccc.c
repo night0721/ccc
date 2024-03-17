@@ -495,7 +495,7 @@ long add_file_stat(char *filepath, int ftype)
     /* max 25 chars due to long, space, suffix and null */
     char *size = memalloc(25 * sizeof(char));
     int unit = 0;
-    const char* units[] = {"B", "KB", "MB", "GB", "TB", "PB"};
+    const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
     while (bytes > 1024) {
         bytes /= 1024;
         unit++;
