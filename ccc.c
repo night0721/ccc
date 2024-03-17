@@ -747,7 +747,7 @@ void draw_border_title(WINDOW *window, bool active, int id)
     /* check if the window is directory of preview */
     int width = half_width;
     if (id == 0) {          /* left */
-         width += WINDOW_OFFSET;    
+        width += WINDOW_OFFSET;    
     } else if (id == 1) {   /* right */
         width -= WINDOW_OFFSET;
     }
