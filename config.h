@@ -2,7 +2,7 @@
 #define PH 1            /* panel height */
 #define JUMP_NUM 14     /* how long ctrl + u/d jump are */
 
-/* Calculate directories' sizes upon entering? */
+/* Calculate directories' sizes RECURSIVELY upon entering? */
 #define DIRS_SIZE false
 
 /* Default text editor */

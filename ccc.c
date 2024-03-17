@@ -202,7 +202,7 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            /* go to $HOME */
+            /* '~' go to $HOME */
             case TILDE:;
                 char *home = getenv("HOME");
                 if (home == NULL) {
@@ -385,7 +385,7 @@ int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, s
 /*
  * Get file's last modified time, size, type
  * Add that file into list
- * ftype: 0 = normal file, 1 = marked
+ * ftype: normal file = 0, marked = 1
  */
 long add_file_stat(char *filepath, int ftype)
 {
@@ -427,6 +427,8 @@ long add_file_stat(char *filepath, int ftype)
     /* if file is to be marked */
     if (ftype == 1) {
         long index = add_marked(filepath, type);
+        /* free type and return without allocating more stuff */
+        free(type);
         if (index != -1) {
             return index;   /* just marked */
         } else {
@@ -454,23 +456,22 @@ long add_file_stat(char *filepath, int ftype)
     /* max 25 chars due to long, space, suffix and null */
     char *size = memalloc(25 * sizeof(char));
     int unit = 0;
-    const char* units[] = {"  B", "KiB", "MiB", "GiB", "TiB", "PiB"};
+    const char* units[] = {"B", "KB", "MB", "GB", "TB", "PB"};
     while (bytes > 1024) {
         bytes /= 1024;
         unit++;
     }
-    /* 4 sig fig, limiting characters to have better format  */
-    sprintf(size, "%-6.4g %-3s", bytes, units[unit]);
+    /* display sizes */
+    sprintf(size, "%.3g%s", bytes, units[unit]);
 
     char *total_stat = memalloc(45 * sizeof(char));
-    snprintf(total_stat, 45, "%-18s %-10s", time, size);
+    snprintf(total_stat, 45, "%-18s %-8s", time, size);
     total_stat[strlen(total_stat)] = '\0';
+
+    long index = add_file(filepath, total_stat, type, color);
 
     free(time);
     free(size);
-    
-    long index = add_file(filepath, total_stat, type, color);
-
     free(total_stat);
     free(type);
     return index;
@@ -636,7 +637,7 @@ void edit_file()
 }
 
 /*
- * Print line to panel
+ * Print line to the panel
  */
 void wpprintw(const char *line)
 {
