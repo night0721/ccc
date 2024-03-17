@@ -131,7 +131,10 @@ void remove_marked(file *marked_file)
     }
 }
 
-long add_marked(char *filepath, char *type)
+/*
+ * force will not remove duplicate marked files, instead it just skip adding
+ */
+long add_marked(char *filepath, char *type, bool force)
 {
     file *current = marked;
     file *new_file = memalloc(sizeof(file));
@@ -153,17 +156,25 @@ long add_marked(char *filepath, char *type)
     long index = 1;
     while (current->next != NULL) {
         if (strcmp(current->path, new_file->path) == 0) {
-            remove_marked(current);
-            free_file(new_file);
-            return -1;
+            if (force) {
+                return index;
+            } else {
+                remove_marked(current);
+                free_file(new_file);
+                return -1;
+            }
         }
         current = current->next;
         index++;
     }
     if (strcmp(current->path, new_file->path) == 0){
-        remove_marked(current);
-        free_file(new_file);
-        return -1;
+        if (force) {
+            return 0;
+        } else {
+            remove_marked(current);
+            free_file(new_file);
+            return -1;
+        }
     }
     current->next = new_file;
     return index;

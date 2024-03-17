@@ -236,16 +236,15 @@ int main(int argc, char** argv)
                 break;
 
             /* mark one file */
-            case SPACE:;
+            case SPACE:
                 add_file_stat(get_filepath(current_selection), 1);
                 highlight_current_line();
                 break;
 
             /* mark all files in directory */
-            case 'a':;
-                int save_current_sel = current_selection;
-                populate_files(cwd, 1);
-                change_dir(cwd, save_current_sel);      /* reload current dir */
+            case 'a':
+                populate_files(cwd, 2);
+                change_dir(cwd, current_selection); /* reload current dir */
                 break;
 
             /* mark actions: */
@@ -368,7 +367,7 @@ int mkdir_p(const char *destdir)
 
 /*
  * Read the provided directory and add all files in directory to linked list
- * ftype: normal files = 0, marked = 1
+ * ftype: normal files = 0, marked = 1, marking ALL = 2
  * ep->d_name -> filename
  */
 void populate_files(const char *path, int ftype)
@@ -417,7 +416,7 @@ int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, s
 /*
  * Get file's last modified time, size, type
  * Add that file into list
- * ftype: normal file = 0, marked = 1
+ * ftype: normal file = 0, normal marked = 1, marking ALL = 2
  */
 long add_file_stat(char *filepath, int ftype)
 {
@@ -457,8 +456,10 @@ long add_file_stat(char *filepath, int ftype)
     }
 
     /* if file is to be marked */
-    if (ftype == 1) {
-        long index = add_marked(filepath, type);
+    if (ftype == 1 || ftype == 2) {
+        /* force if user is marking all files */
+        bool force = ftype == 2 ? true : false;
+        long index = add_marked(filepath, type, force);
         /* free type and return without allocating more stuff */
         free(type);
         if (index != -1) {
