@@ -16,14 +16,6 @@
 #include "util.h"
 #include "config.h"
 
-typedef struct {
-    int id;
-    WINDOW *window;
-    int location;
-    int y;
-    int x;
-} WIN_STRUCT;
-
 /* functions' definitions */
 void change_dir(const char *buf, int selection);
 int mkdir_p(const char *destdir);
@@ -35,7 +27,7 @@ void show_file_content();
 void edit_file();
 void wpprintw(const char *line);
 void init_windows();
-void draw_border_title(WINDOW *window, bool active, int id);
+void draw_border_title(WINDOW *window, bool active);
 
 /* global variables */
 unsigned int focus = 0;
@@ -43,7 +35,6 @@ long current_selection = 0;
 bool dirs_size = DIRS_SIZE;
 char *cwd;
 int half_width;
-WIN_STRUCT windows[5];
 WINDOW *directory_border;
 WINDOW *directory_content;
 WINDOW *preview_border;
@@ -298,9 +289,11 @@ int main(int argc, char** argv)
                 break;
 
             case KEY_RESIZE:
-                for (int i = 0; i < 2; i++)
-                    delwin(windows[i].window);
-
+                delwin(directory_border);
+                delwin(directory_content);
+                delwin(preview_border);
+                delwin(preview_content);
+                delwin(panel);
                 endwin();
                 init_windows();
                 break;
@@ -384,7 +377,7 @@ void populate_files(const char *path, int ftype)
     struct dirent *ep;
 
     #if DRAW_BORDERS
-        draw_border_title(directory_border, true, 0);
+        draw_border_title(directory_border, true);
     #endif
     if ((dp = opendir(path)) != NULL) {
         /* clear directory window to ready for printing */
@@ -532,8 +525,10 @@ void highlight_current_line()
     long range = files_len();
     /* not highlight if no files in directory */
     if (range == 0) {
-        wprintw(preview_content, "empty directory");
-        wrefresh(preview_content);
+        #if DRAW_PREVIEW
+            wprintw(preview_content, "empty directory");
+            wrefresh(preview_content);
+        #endif
         return;
     }
 
@@ -621,7 +616,7 @@ void show_file_content()
         return;
     }
     #if DRAW_BORDERS
-        draw_border_title(preview_border, true, 1);
+        draw_border_title(preview_border, true);
     #endif
 
     int c;
@@ -708,47 +703,40 @@ void init_windows()
     |---------------||-------------||
     +==========panel (4)===========*/
     
-    /*                         lines,          cols,           y,          x             */
-    panel =             newwin(PH,             COLS,           LINES - PH, 0             );
+    /*                         lines,          cols,            y,          x             */
+    panel =             newwin(PH,             COLS,            LINES - PH, 0             );
     /* draw border around windows */
     #if DRAW_BORDERS
-    directory_border =  newwin(LINES - PH,     width_left,     0,          0             );
-    directory_content = newwin(LINES - PH - 2, width_left - 2, 1,          1             );
+    directory_border =  newwin(LINES - PH,     width_left,      0,          0             );
+    directory_content = newwin(LINES - PH - 2, width_left - 2,  1,          1             );
 
     preview_border =    newwin(LINES - PH,     width_right,     0,          width_left    );
     preview_content =   newwin(LINES - PH - 2, width_right - 2, 1,          width_left + 1);
     
-    draw_border_title(directory_border, true, 0);
-    draw_border_title(preview_border, true, 1);
+    draw_border_title(directory_border, true);
+    draw_border_title(preview_border, true);
     #else
     /* if there are no borders, then draw content in their places */
-    directory_border =  newwin(0,              0,              COLS,       LINES         );
-    preview_border =    newwin(0,              0,              COLS,       LINES         );
+    directory_border =  newwin(0,              0,               COLS,       LINES         );
+    preview_border =    newwin(0,              0,               COLS,       LINES         );
     /* -1 for the one space to the left */
-    directory_content = newwin(LINES - PH - 1, width_left,     0,          1             );
-    preview_content =   newwin(LINES - PH,     width_right,    0,          width_left    );
+    directory_content = newwin(LINES - PH - 1, width_left,      0,          1             );
+    preview_content =   newwin(LINES - PH,     width_right,     0,          width_left    );
     #endif
 
     scrollok(directory_content, true);
-    /*                          id,  window             location  y,            x              */
-    windows[0] = (WIN_STRUCT) { 1,   directory_border,  0,        0,            0              };
-    windows[1] = (WIN_STRUCT) { 2,   directory_content, 0,        0,            0              };
-    windows[2] = (WIN_STRUCT) { 3,   preview_border,    1,        0,            width_left     };
-    windows[3] = (WIN_STRUCT) { 4,   preview_content,   1,        0,            width_left     };
-    windows[4] = (WIN_STRUCT) { 5,   panel,             2,        LINES - PH,   0              };
 }
 
 /*
  * Draw the border of the window depending if it's active or not,
- * id: directory_border = 0, preview_border = 1
  */
-void draw_border_title(WINDOW *window, bool active, int id)
+void draw_border_title(WINDOW *window, bool active)
 {
     /* check if the window is directory of preview */
     int width = half_width;
-    if (id == 0) {          /* left */
+    if (window == directory_border) {          /* left */
         width += WINDOW_OFFSET;    
-    } else if (id == 1) {   /* right */
+    } else if (window == preview_border) {   /* right */
         width -= WINDOW_OFFSET;
     }
 
