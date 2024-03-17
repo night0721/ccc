@@ -17,6 +17,7 @@
 #include "config.h"
 
 typedef struct {
+    int id;
     WINDOW *window;
     int location;
     int y;
@@ -34,7 +35,7 @@ void show_file_content();
 void edit_file();
 void wpprintw(const char *line);
 void init_windows();
-void draw_border_title(WINDOW *window, bool active);
+void draw_border_title(WINDOW *window, bool active, int id);
 
 /* global variables */
 unsigned int focus = 0;
@@ -255,6 +256,42 @@ int main(int argc, char** argv)
                 populate_files(cwd, 1);
                 change_dir(cwd, save_current_sel);      /* reload current dir */
                 break;
+
+            /* mark actions: */
+            /* delete */
+            case 'd':;
+                if (marked_len()) {
+                    ;
+                }
+                break;
+
+            /* move */
+            case 'm':;
+                if (marked_len()) {
+                    ;
+                }
+                break;
+
+            /* copy */
+            case 'c':;
+                if (marked_len()) {
+                    ;
+                }
+                break;
+
+            /* symbolic link */
+            case 's':;
+                if (marked_len()) {
+                    ;
+                }
+                break;
+
+            /* bulk rename */
+            case 'b':;
+                if (marked_len()) {
+                    ;
+                }
+                break;
             
             /* escape */
             case ESC:
@@ -346,7 +383,9 @@ void populate_files(const char *path, int ftype)
     DIR *dp;
     struct dirent *ep;
 
-    draw_border_title(directory_border,  true);
+    #if DRAW_BORDERS
+        draw_border_title(directory_border, true, 0);
+    #endif
     if ((dp = opendir(path)) != NULL) {
         /* clear directory window to ready for printing */
         wclear(directory_content);
@@ -559,7 +598,9 @@ void highlight_current_line()
     wrefresh(directory_content);
     wrefresh(panel);
     /* show file content every time cursor changes */
-    show_file_content();
+    #if DRAW_PREVIEW
+        show_file_content();
+    #endif
     wrefresh(preview_content);
 }
 
@@ -579,7 +620,9 @@ void show_file_content()
         mvwprintw(preview_content, 0, 0, "Unable to read %s", current_file->path);
         return;
     }
-    draw_border_title(preview_border, true);
+    #if DRAW_BORDERS
+        draw_border_title(preview_border, true, 1);
+    #endif
 
     int c;
     /* check if its binary */
@@ -648,40 +691,67 @@ void wpprintw(const char *line)
 
 void init_windows()
 {
+    /* offset for width of the content 1 and 2 */
+    int width_left = half_width;
+    int width_right = half_width;
+    #ifdef WINDOW_OFFSET
+        width_left += WINDOW_OFFSET;
+        width_right -= WINDOW_OFFSET;
+    #endif
+
     /*------------------------------+
     |----border(0)--||--border(2)--||
     ||              ||             ||
     || content (1)  || content (3) ||
-    ||              ||             ||
+    || (directory)  ||  (preview)  ||
     ||              ||             ||
     |---------------||-------------||
     +==========panel (4)===========*/
     
     /*                         lines,          cols,           y,          x             */
-    directory_border =  newwin(LINES - PH,     half_width,     0,          0             );
-    directory_content = newwin(LINES - PH -2,  half_width - 2, 1,          1);
-    preview_border =    newwin(LINES - PH,     half_width,     0,          half_width    );
-    preview_content =   newwin(LINES - PH - 2, half_width - 2, 1,          half_width + 1);
     panel =             newwin(PH,             COLS,           LINES - PH, 0             );
+    /* draw border around windows */
+    #if DRAW_BORDERS
+    directory_border =  newwin(LINES - PH,     width_left,     0,          0             );
+    directory_content = newwin(LINES - PH - 2, width_left - 2, 1,          1             );
+
+    preview_border =    newwin(LINES - PH,     width_right,     0,          width_left    );
+    preview_content =   newwin(LINES - PH - 2, width_right - 2, 1,          width_left + 1);
     
-    /* draw border around windows     */
-    draw_border_title(directory_border,  true);
-    draw_border_title(preview_border,   true);
+    draw_border_title(directory_border, true, 0);
+    draw_border_title(preview_border, true, 1);
+    #else
+    /* if there are no borders, then draw content in their places */
+    directory_border =  newwin(0,              0,              COLS,       LINES         );
+    preview_border =    newwin(0,              0,              COLS,       LINES         );
+    /* -1 for the one space to the left */
+    directory_content = newwin(LINES - PH - 1, width_left,     0,          1             );
+    preview_content =   newwin(LINES - PH,     width_right,    0,          width_left    );
+    #endif
 
     scrollok(directory_content, true);
-    /*                          window             location  y,            x              */
-    windows[0] = (WIN_STRUCT) { directory_border,  0,        0,            0              };
-    windows[1] = (WIN_STRUCT) { directory_border,  0,        0,            0              };
-    windows[2] = (WIN_STRUCT) { preview_border,    1,        0,            half_width     };
-    windows[3] = (WIN_STRUCT) { preview_content,   1,        0,            half_width     };
-    windows[4] = (WIN_STRUCT) { panel,             2,        LINES - PH,   0              };
+    /*                          id,  window             location  y,            x              */
+    windows[0] = (WIN_STRUCT) { 1,   directory_border,  0,        0,            0              };
+    windows[1] = (WIN_STRUCT) { 2,   directory_content, 0,        0,            0              };
+    windows[2] = (WIN_STRUCT) { 3,   preview_border,    1,        0,            width_left     };
+    windows[3] = (WIN_STRUCT) { 4,   preview_content,   1,        0,            width_left     };
+    windows[4] = (WIN_STRUCT) { 5,   panel,             2,        LINES - PH,   0              };
 }
 
 /*
- * Draw the border of the window depending if it's active or not
+ * Draw the border of the window depending if it's active or not,
+ * id: directory_border = 0, preview_border = 1
  */
-void draw_border_title(WINDOW *window, bool active)
+void draw_border_title(WINDOW *window, bool active, int id)
 {
+    /* check if the window is directory of preview */
+    int width = half_width;
+    if (id == 0) {          /* left */
+         width += WINDOW_OFFSET;    
+    } else if (id == 1) {   /* right */
+        width -= WINDOW_OFFSET;
+    }
+
     /* turn on color depends on active */
     if (active) {
         wattron(window, COLOR_PAIR(7));
@@ -690,18 +760,18 @@ void draw_border_title(WINDOW *window, bool active)
     }
     /* draw top border */
     mvwaddch(window, 0, 0, ACS_ULCORNER);  /* upper left corner */
-    mvwhline(window, 0, 1, ACS_HLINE, half_width - 2); /* top horizontal line */
-    mvwaddch(window, 0, half_width - 1, ACS_URCORNER); /* upper right corner */
+    mvwhline(window, 0, 1, ACS_HLINE, width - 2); /* top horizontal line */
+    mvwaddch(window, 0, width - 1, ACS_URCORNER); /* upper right corner */
 
     /* draw side border */
     mvwvline(window, 1, 0, ACS_VLINE, LINES - 2); /* left vertical line */
-    mvwvline(window, 1, half_width - 1, ACS_VLINE, LINES - 2); /* right vertical line */
+    mvwvline(window, 1, width - 1, ACS_VLINE, LINES - 2); /* right vertical line */
 
     /* draw bottom border
      * make space for the panel */
     mvwaddch(window, LINES - PH - 1, 0, ACS_LLCORNER); /* lower left corner */
-    mvwhline(window, LINES - PH - 1, 1, ACS_HLINE, half_width - 2); /* bottom horizontal line */
-    mvwaddch(window, LINES - PH - 1, half_width - 1, ACS_LRCORNER); /* lower right corner */
+    mvwhline(window, LINES - PH - 1, 1, ACS_HLINE, width - 2); /* bottom horizontal line */
+    mvwaddch(window, LINES - PH - 1, width - 1, ACS_LRCORNER); /* lower right corner */
 
     /* turn color off after turning it on */
     if (active) {

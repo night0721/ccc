@@ -5,6 +5,23 @@
 /* Calculate directories' sizes RECURSIVELY upon entering? */
 #define DIRS_SIZE false
 
+#define DRAW_BORDERS true   /* Draw borders around windows? */
+#define DRAW_PREVIEW true   /* Draw file preview? */
+
+/* set width offset for windows:
++-------------%-------------+
+|             %             |
+|    files    %   preview   |
+|             %             |
++=============%=============+
+set where the % line between them resides
+
+In COLS:
+0 will make them equal (at the center),
+15 will make files bigger
+-15 will make preview bigger */
+#define WINDOW_OFFSET 0
+
 /* Default text editor */
 #define EDITOR "nvim"
 
