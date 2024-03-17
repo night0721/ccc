@@ -265,9 +265,3 @@ char *get_line(long index)
         return NULL;
     }
 }
-
-
-/*
- * Get file's type and color
- */
-char *get_type(__mode_t st_mode);
