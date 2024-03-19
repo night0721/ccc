@@ -6,41 +6,75 @@ The fact that it is written in C makes it more versatile and rapid, enabling us 
 
 ## Features
 
-- Vim-like key binding
-- File Preview
-
 Consider this project incomplete and WIP!
 
-| Feature                        | Ported | Dropped | Added |
-|--------------------------------|:------:|:-------:|:-----:|
-| Standard movement              |   X    |         |       |
-| Advanced movement (jumps)      |   X    |         |       |
-| Searching                      |        |         |       |
-| File preview                   |        |         |   X   |
-| Sorting                        |        |         |       |
-| Marking and marking operations |        |         |       |
-| Other operations on files      |        |         |       |
-| File details                   |   X    |         |       |
-| Image previews                 |        |         |       |
-| Help                           |        |         |       |
-| History                        |        |         |       |
-| Bookmarks                      |        |         |       |
-| Bulk rename                    |        |         |       |
-| Workspaces                     |        |         |       |
+| Feature of fff                 | Ported | Dropped |
+|--------------------------------|:------:|:-------:|
+| Standard movement              |   X    |         |
+| Advanced movement (jumps)      |   X    |         |
+| File details                   |   X    |         |
+| Searching for files            |        |         |
+| Sorting                        |        |         |
+| Marking and marking operations |        |         |
+| Other operations on files      |        |         |
+| Image previews                 |        |         |
+| Help                           |        |         |
+| History                        |        |         |
+| Bookmarks                      |        |         |
+| Bulk rename                    |        |         |
+
+#### Features added that are not in [fff](https://github.com/piotr-marendowski/fff):
+
+- File preview (without highlighting)
+
+## Installation
 
 ### Dependencies
 
 - gcc
+- ncurses
 - make
 - pkg-config
-- ncurses
 
 ### Building
 
 You will need to run these with elevated privilages.
 
-```sh
+```
 $ git clone https://github.com/piotr-marendowski/ccc
 $ make 
 $ sudo make install
 ```
+
+## Usage
+
+```
+j: scroll down
+k: scroll up
+h: go to parent dir
+l: go to child dir
+
+down:  scroll down
+up:    scroll up
+left:  go to parent dir
+right: go to child dir
+
+enter: go to child dir/open file
+backspace: go to parent dir
+
+g: go to top
+G: go to bottom
+
+t: go to trash
+~: go to home
+z: refresh current dir
+
+space: mark file
+a: mark all files in directory
+
+q: exit
+```
+
+## License
+
+This project has GNU GPL v.3 license.

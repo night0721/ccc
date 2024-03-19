@@ -16,7 +16,7 @@ void clear_files();
 void clear_marked();
 long add_file(char *filepath, char *stats, char *type, int color);
 void remove_marked(file *marked_file);
-long add_marked(char *filepath, char *type);
+long add_marked(char *filepath, char *type, bool force);
 file *get_marked(long index);
 bool in_marked(char *path);
 file *get_file(long index);
