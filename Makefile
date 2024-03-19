@@ -14,7 +14,7 @@ MANDIR = $(PREFIX)/share/man/man1
 LDFLAGS = $(shell pkg-config --libs ncurses)
 CFLAGS = -O3 -pipe -s -std=c99 -pedantic -Wall $(shell pkg-config --cflags ncurses)
 
-SRC = ccc.c util.c file.c $(CONF)
+SRC = ccc.c util.c file.c
 
 $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC) -o $@
