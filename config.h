@@ -1,6 +1,7 @@
 /* Settings */
 #define PH 1            /* panel height */
 #define JUMP_NUM 14     /* how long ctrl + u/d jump are */
+#define PATH_MAX 4096
 
 /* Calculate directories' sizes RECURSIVELY upon entering? */
 #define DIRS_SIZE false
@@ -24,6 +25,9 @@ In COLS:
 
 /* Default text editor */
 #define EDITOR "nvim"
+
+/* File location to write last directory */
+#define LAST_D "~/.cache/ccc/.ccc_d"
 
 /* Keybindings */
 #define CTRLD 0x04
