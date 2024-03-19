@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <linux/limits.h>
 #include <dirent.h>         /* directories etc. */
 #include <sys/stat.h>
 #include <errno.h>
@@ -24,7 +25,6 @@ long add_file_stat(char *filepath, int ftype);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
-int write_last_d();
 void wpprintw(const char *line);
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
@@ -101,10 +101,6 @@ int main(int argc, char** argv)
         switch (ch) {
             /* quit */
             case 'q':
-                if (write_last_d() == -1) {
-                    /* prompt user so error message can be shown to user */
-                    getch();
-                }
                 endwin();
                 return 0;
 
@@ -298,11 +294,7 @@ int main(int argc, char** argv)
                 delwin(preview_content);
                 delwin(panel);
                 endwin();
-                half_width = COLS / 2;
                 init_windows();
-                refresh();
-                populate_files(cwd, 0);
-                highlight_current_line();
                 break;
             default:
                 break;
@@ -328,13 +320,14 @@ void change_dir(const char *buf, int selection)
 
 /*
  * Recursively create directory by creating each subdirectory
- * like mkdir -p
  */
 int mkdir_p(const char *destdir)
 {
     char *path = memalloc(PATH_MAX * sizeof(char));
+    char *token = strtok(path, "/");
     char dir_path[PATH_MAX] = "";
 
+    strcpy(path, destdir);
     if (destdir[0] == '~') {
         char *home = getenv("HOME");
         if (home == NULL) {
@@ -342,20 +335,16 @@ int mkdir_p(const char *destdir)
             return -1;
         }
         /* replace ~ with home */
-        snprintf(path, PATH_MAX, "%s%s", home, destdir + 1);
-    } else {
-        strcpy(path, destdir);
+        memmove(path + strlen(home), path + 1, strlen(path));
+        memcpy(path, home, strlen(home));
     }
-
     /* fix first / not appearing in the string */
     if (path[0] == '/')
         strcat(dir_path, "/");
 
-    char *token = strtok(path, "/");
     while (token != NULL) {
         strcat(dir_path, token);
         strcat(dir_path, "/");
-        
 
         if (mkdir(dir_path, 0755) == -1) {
             struct stat st;
@@ -684,46 +673,6 @@ void edit_file()
         refresh();          /* store the screen contents */
         free(filename);
     }
-}
-
-int write_last_d() {
-    #ifdef LAST_D
-        char *last_d = memalloc(PATH_MAX * sizeof(char)); 
-        strcpy(last_d, LAST_D);
-    #else
-        char *last_d = getenv("CCC_LAST_D");
-    #endif
-
-    if (last_d == NULL) {
-        wpprintw("Cannot get CCC_LAST_D variable, is it defined?");
-        return -1;
-    } else {
-        char *last_ddup = memalloc(PATH_MAX * sizeof(char));
-        char *home = getenv("HOME");
-        if (home == NULL) {
-            wpprintw("$HOME is not defined");
-            return -1;
-        }
-        /* replace ~ with home */
-        snprintf(last_ddup, PATH_MAX, "%s%s", home, last_d + 1);
-
-        char *last_d_dir = strrchr(last_d, '/');
-        if (last_d_dir != NULL) {
-            *last_d_dir = '\0'; /* truncate string */
-        }
-        mkdir_p(last_d);
-        char a[100];
-        sprintf(a, "notify-send 'aaa %s'", last_ddup);
-        system(a);
-        FILE *last_d_file = fopen(last_ddup, "w");
-        if (last_d_file == NULL) {
-            wpprintw("Cannot open last directory file");
-            return -1;
-        }
-        fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
-        fclose(last_d_file);
-    }
-    return 0;
 }
 
 /*
