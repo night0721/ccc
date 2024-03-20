@@ -78,7 +78,8 @@ space: mark file
 a: mark all files in directory
 
 ?: show help
-q: exit
+q: exit with last dir written to file
+ctrl+c exit without writing last dir
 ```
 
 ## License
