@@ -18,7 +18,7 @@
 /* functions' definitions */
 void show_help();
 void start_ccc();
-void change_dir(const char *buf, int selection);
+void change_dir(const char *buf, int selection, int ftype);
 int mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
@@ -94,6 +94,7 @@ int main(int argc, char** argv)
     cwd = memalloc(PATH_MAX * sizeof(char));
     p_cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
+    populate_files(cwd, 0);
     start_ccc();
 
     int ch, ch2;
@@ -116,7 +117,7 @@ int main(int argc, char** argv)
 
             /* reload using z */
             case 'z':
-                change_dir(cwd, 0); 
+                change_dir(cwd, 0, 0); 
                 break;
 
             /* go back by backspace or h or left arrow */
@@ -128,11 +129,11 @@ int main(int argc, char** argv)
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     if (last_slash == cwd) {
-                        strcpy(cwd, "/");
-                        change_dir(cwd, 0);
+                        change_dir("/", 0, 0);
+                        break;
                     }
                     *last_slash = '\0';
-                    change_dir(cwd, 0);
+                    change_dir(cwd, 0, 0);
                 }
                 break;
 
@@ -145,7 +146,7 @@ int main(int argc, char** argv)
                 /* check if it is directory or a regular file */
                 if (strncmp(c_file.type, "DIR", 3) == 0) {
                     /* change cwd to directory */
-                    change_dir(c_file.path, 0); 
+                    change_dir(c_file.path, 0, 0); 
                 } else if (strncmp(c_file.type, "REG", 3) == 0) {
                     edit_file();
                 }
@@ -214,7 +215,7 @@ int main(int argc, char** argv)
                 if (home == NULL) {
                     wpprintw("$HOME is not defined");
                 } else {
-                    change_dir(home, 0);
+                    change_dir(home, 0, 0);
                 }
                 break;
 
@@ -237,19 +238,19 @@ int main(int argc, char** argv)
                             }
                         }
                     }
-                    change_dir(trash_dir, 0);
+                    change_dir(trash_dir, 0, 0);
                 }
                 break;
 
             /* show directories' sizes */
             case 'A':
                 dirs_size = !dirs_size;
-                change_dir(cwd, 0);
+                change_dir(cwd, 0, 0);
                 break;
 
             /* go to previous dir */
             case '-':
-                change_dir(p_cwd, 0);
+                change_dir(p_cwd, 0, 0);
                 break;
 
             /* show help */
@@ -260,13 +261,13 @@ int main(int argc, char** argv)
             /* toggle hidden files */
             case '.':
                 show_hidden = !show_hidden;
-                change_dir(cwd, 0);
+                change_dir(cwd, 0, 0);
                 break;
 
             /* toggle file details */
             case 'i':
                 file_details = !file_details;
-                change_dir(cwd, 0);
+                change_dir(cwd, 0, 0);
 
             /* mark one file */
             case SPACE:
@@ -276,8 +277,7 @@ int main(int argc, char** argv)
 
             /* mark all files in directory */
             case 'a':
-                populate_files(cwd, 2);
-                change_dir(cwd, current_selection); /* reload current dir */
+                change_dir(cwd, current_selection, 2); /* reload current dir */
                 break;
 
             /* mark actions: */
@@ -327,7 +327,7 @@ int main(int argc, char** argv)
                 delwin(preview_content);
                 delwin(panel);
                 endwin();
-                start_ccc();
+                start_ccc(); 
                 break;
             default:
                 break;
@@ -353,15 +353,13 @@ void start_ccc()
 {
     half_width = COLS / 2;
     init_windows();
-    refresh();
-    populate_files(cwd, 0);
     highlight_current_line();
 }
 
 /*
  * Change directory in window with selection
  */
-void change_dir(const char *buf, int selection)
+void change_dir(const char *buf, int selection, int ftype)
 {
     char *buf_dup;
     if (buf == p_cwd) {
@@ -375,7 +373,7 @@ void change_dir(const char *buf, int selection)
     strcpy(cwd, buf_dup);
     arraylist_free(files);
     files = arraylist_init(100);
-    populate_files(cwd, 0);
+    populate_files(cwd, ftype);
     current_selection = selection;
     highlight_current_line();
 }
@@ -439,9 +437,6 @@ void populate_files(const char *path, int ftype)
     DIR *dp;
     struct dirent *ep;
 
-    #if DRAW_BORDERS
-        draw_border_title(directory_border, true);
-    #endif
     if ((dp = opendir(path)) != NULL) {
         /* clear directory window to ready for printing */
         wclear(directory_content);
@@ -469,6 +464,9 @@ void populate_files(const char *path, int ftype)
     } else {
         perror("ccc");
     }
+    #if DRAW_BORDERS
+        draw_border_title(directory_border, true);
+    #endif
 }
 
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
@@ -822,6 +820,7 @@ void init_windows()
     #endif
 
     scrollok(directory_content, true);
+    refresh();
 }
 
 /*
