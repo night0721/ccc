@@ -16,6 +16,7 @@
 #include "config.h"
 
 /* functions' definitions */
+void start_ccc();
 void change_dir(const char *buf, int selection);
 int mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
@@ -80,15 +81,9 @@ int main(int argc, char** argv)
     init_pair(7, COLOR_CYAN, -1);       /* MARKED FILES */
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
-    half_width = COLS / 2;
-    init_windows();
-    refresh();
-
     cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
-
-    populate_files(cwd, 0);
-    highlight_current_line();
+    start_ccc();
 
     int ch, ch2;
     while (1) {
@@ -298,11 +293,7 @@ int main(int argc, char** argv)
                 delwin(preview_content);
                 delwin(panel);
                 endwin();
-                half_width = COLS / 2;
-                init_windows();
-                refresh();
-                populate_files(cwd, 0);
-                highlight_current_line();
+                start_ccc();
                 break;
             default:
                 break;
@@ -312,6 +303,15 @@ int main(int argc, char** argv)
     clear_marked();
     endwin();
     return 0;
+}
+
+void start_ccc()
+{
+    half_width = COLS / 2;
+    init_windows();
+    refresh();
+    populate_files(cwd, 0);
+    highlight_current_line();
 }
 
 /*
