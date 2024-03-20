@@ -35,6 +35,7 @@ unsigned int focus = 0;
 long current_selection = 0;
 bool dirs_size = DIRS_SIZE;
 char *cwd;
+char *p_cwd; /* previous cwd */
 int half_width;
 WINDOW *directory_border;
 WINDOW *directory_content;
@@ -82,6 +83,7 @@ int main(int argc, char** argv)
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     cwd = memalloc(PATH_MAX * sizeof(char));
+    p_cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
     start_ccc();
 
@@ -113,6 +115,7 @@ int main(int argc, char** argv)
             case LEFT:
             case 'h':;
                 /* get parent directory */
+                strcpy(p_cwd, cwd);
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     *last_slash = '\0';
@@ -124,6 +127,7 @@ int main(int argc, char** argv)
             case ENTER:
             case RIGHT:
             case 'l':;
+                strcpy(p_cwd, cwd);
                 file *file = get_file(current_selection);
                 if (file != NULL) {
                     /* check if it is directory or a regular file */
@@ -234,6 +238,11 @@ int main(int argc, char** argv)
                 highlight_current_line();
                 break;
 
+            /* go to previous dir */
+            case '-':
+                change_dir(p_cwd, 0);
+                break;
+
             /* mark one file */
             case SPACE:
                 add_file_stat(get_filepath(current_selection), 1);
@@ -319,7 +328,16 @@ void start_ccc()
  */
 void change_dir(const char *buf, int selection)
 {
-    strcpy(cwd, buf);
+    char *buf_dup;
+    if (buf == p_cwd) {
+        buf_dup = strdup(p_cwd);
+        if (buf_dup == NULL) {
+            return;
+        }
+    } else {
+        buf_dup = (char *) buf;
+    }
+    strcpy(cwd, buf_dup);
     clear_files();
     populate_files(cwd, 0);
     current_selection = selection;
