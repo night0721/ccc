@@ -12,7 +12,7 @@ MANDIR = $(PREFIX)/share/man/man1
 
 # Flags
 LDFLAGS = $(shell pkg-config --libs ncurses)
-CFLAGS = -O3 -pipe -s -std=c99 -pedantic -Wall $(shell pkg-config --cflags ncurses)
+CFLAGS = -O3 -march=native -mtune=native -pipe -s -std=c99 -pedantic -Wall $(shell pkg-config --cflags ncurses)
 
 SRC = ccc.c util.c file.c
 

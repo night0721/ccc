@@ -16,11 +16,13 @@
 #include "config.h"
 
 /* functions' definitions */
+void show_help();
+void start_ccc();
 void change_dir(const char *buf, int selection);
 int mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
-long add_file_stat(char *filepath, int ftype);
+void add_file_stat(char *filepath, int ftype);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
@@ -33,8 +35,13 @@ void draw_border_title(WINDOW *window, bool active);
 unsigned int focus = 0;
 long current_selection = 0;
 bool dirs_size = DIRS_SIZE;
+bool show_hidden = SHOW_HIDDEN;
+bool file_details = SHOW_DETAILS;
 char *cwd;
+char *p_cwd; /* previous cwd */
 int half_width;
+ArrayList *files;
+ArrayList *marked;
 WINDOW *directory_border;
 WINDOW *directory_content;
 WINDOW *preview_border;
@@ -80,15 +87,14 @@ int main(int argc, char** argv)
     init_pair(7, COLOR_CYAN, -1);       /* MARKED FILES */
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
-    half_width = COLS / 2;
-    init_windows();
-    refresh();
+    /* init files and marked arrays */
+    files = arraylist_init(100);
+    marked = arraylist_init(100);
 
     cwd = memalloc(PATH_MAX * sizeof(char));
+    p_cwd = memalloc(PATH_MAX * sizeof(char));
     getcwd(cwd, PATH_MAX);
-
-    populate_files(cwd, 0);
-    highlight_current_line();
+    start_ccc();
 
     int ch, ch2;
     while (1) {
@@ -118,6 +124,7 @@ int main(int argc, char** argv)
             case LEFT:
             case 'h':;
                 /* get parent directory */
+                strcpy(p_cwd, cwd);
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
                     *last_slash = '\0';
@@ -129,15 +136,14 @@ int main(int argc, char** argv)
             case ENTER:
             case RIGHT:
             case 'l':;
-                file *file = get_file(current_selection);
-                if (file != NULL) {
-                    /* check if it is directory or a regular file */
-                    if (strncmp(file->type, "DIR", 3) == 0) {
-                        /* change cwd to directory */
-                        change_dir(file->path, 0); 
-                    } else if (strncmp(file->type, "REG", 3) == 0) {
-                        edit_file();
-                    }
+                strcpy(p_cwd, cwd);
+                file c_file = files->items[current_selection];
+                /* check if it is directory or a regular file */
+                if (strncmp(c_file.type, "DIR", 3) == 0) {
+                    /* change cwd to directory */
+                    change_dir(c_file.path, 0); 
+                } else if (strncmp(c_file.type, "REG", 3) == 0) {
+                    edit_file();
                 }
                 break;
 
@@ -162,10 +168,10 @@ int main(int argc, char** argv)
 
             /* jump down (ctrl d) */
             case CTRLD:
-                if ((current_selection + JUMP_NUM) < (files_len() - 1))
+                if ((current_selection + JUMP_NUM) < (files->length - 1))
                     current_selection += JUMP_NUM;
                 else
-                    current_selection = (files_len() - 1);
+                    current_selection = (files->length - 1);
 
                 highlight_current_line();
                 break;
@@ -173,7 +179,7 @@ int main(int argc, char** argv)
             /* go down by j or down arrow */
             case DOWN:
             case 'j':
-                if (current_selection < (files_len() - 1))
+                if (current_selection < (files->length - 1))
                     current_selection++;
 
                 highlight_current_line();
@@ -181,7 +187,7 @@ int main(int argc, char** argv)
 
             /* jump to the bottom */
             case 'G':
-                current_selection = (files_len() - 1);
+                current_selection = (files->length - 1);
                 highlight_current_line();
                 break;
 
@@ -234,14 +240,33 @@ int main(int argc, char** argv)
             /* show directories' sizes */
             case 'A':
                 dirs_size = !dirs_size;
-                clear_files();
-                populate_files(cwd, 0);
-                highlight_current_line();
+                change_dir(cwd, 0);
                 break;
+
+            /* go to previous dir */
+            case '-':
+                change_dir(p_cwd, 0);
+                break;
+
+            /* show help */
+            case '?':
+                show_help();
+                break;
+            
+            /* toggle hidden files */
+            case '.':
+                show_hidden = !show_hidden;
+                change_dir(cwd, 0);
+                break;
+
+            /* toggle file details */
+            case 'i':
+                file_details = !file_details;
+                change_dir(cwd, 0);
 
             /* mark one file */
             case SPACE:
-                add_file_stat(get_filepath(current_selection), 1);
+                add_file_stat(files->items[current_selection].path, 1);
                 highlight_current_line();
                 break;
 
@@ -254,35 +279,35 @@ int main(int argc, char** argv)
             /* mark actions: */
             /* delete */
             case 'd':;
-                if (marked_len()) {
+                if (marked->length) {
                     ;
                 }
                 break;
 
             /* move */
             case 'm':;
-                if (marked_len()) {
+                if (marked->length) {
                     ;
                 }
                 break;
 
             /* copy */
             case 'c':;
-                if (marked_len()) {
+                if (marked->length) {
                     ;
                 }
                 break;
 
             /* symbolic link */
             case 's':;
-                if (marked_len()) {
+                if (marked->length) {
                     ;
                 }
                 break;
 
             /* bulk rename */
             case 'b':;
-                if (marked_len()) {
+                if (marked->length) {
                     ;
                 }
                 break;
@@ -298,20 +323,35 @@ int main(int argc, char** argv)
                 delwin(preview_content);
                 delwin(panel);
                 endwin();
-                half_width = COLS / 2;
-                init_windows();
-                refresh();
-                populate_files(cwd, 0);
-                highlight_current_line();
+                start_ccc();
                 break;
             default:
                 break;
         }
     }
-    clear_files();
-    clear_marked();
+    arraylist_free(files);
+    arraylist_free(marked);
     endwin();
     return 0;
+}
+
+void show_help()
+{
+    wclear(directory_content);
+    wclear(preview_content);
+    wprintw(directory_content,"h: go to parent dir\nj: scroll down\nk: scroll up\nl: go to child dir\n\nleft:  go to parent dir\ndown:  scroll down\nup:    scroll up\nright: go to child dir\n\nenter: go to child dir/open file\nbackspace: go to parent dir\n\ngg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\nt: go to trash dir\n~: go to home dir\n-: go to previous dir\nz: refresh current dir\n\nA: show directory disk usage/block size\nspace: mark file\na: mark all files in directory\n\n?: show help\nq: exit with last dir written to file\nctrl+c exit without writing last dir");
+    wpprintw("Visit https://github.com/piotr-marendowski/ccc or use 'man ccc' for help");
+    wrefresh(directory_content);
+    wrefresh(preview_content);
+}
+
+void start_ccc()
+{
+    half_width = COLS / 2;
+    init_windows();
+    refresh();
+    populate_files(cwd, 0);
+    highlight_current_line();
 }
 
 /*
@@ -319,8 +359,18 @@ int main(int argc, char** argv)
  */
 void change_dir(const char *buf, int selection)
 {
-    strcpy(cwd, buf);
-    clear_files();
+    char *buf_dup;
+    if (buf == p_cwd) {
+        buf_dup = strdup(p_cwd);
+        if (buf_dup == NULL) {
+            return;
+        }
+    } else {
+        buf_dup = (char *) buf;
+    }
+    strcpy(cwd, buf_dup);
+    arraylist_free(files);
+    files = arraylist_init(100);
     populate_files(cwd, 0);
     current_selection = selection;
     highlight_current_line();
@@ -398,8 +448,8 @@ void populate_files(const char *path, int ftype)
             filename[0] = '\0';
             strcat(filename, ep->d_name);
 
-            /* can't be strncmp as that would filter out the dotfiles */
-            if (strcmp(filename, ".") && strcmp(filename, "..")) {
+            /* use strncmp to filter out dotfiles */
+            if ((show_hidden && strncmp(filename, ".", 1) && strncmp(filename, "..", 2)) || (!show_hidden && strcmp(filename, ".") && strcmp(filename, ".."))) {
                 /* construct full file path */
                 filename[0] = '\0';
                 strcat(filename, cwd);
@@ -428,13 +478,13 @@ int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, s
  * Add that file into list
  * ftype: normal file = 0, normal marked = 1, marking ALL = 2
  */
-long add_file_stat(char *filepath, int ftype)
+void add_file_stat(char *filepath, int ftype)
 {
     struct stat file_stat;
     if (stat(filepath, &file_stat) == -1) {
         /* can't be triggered? */
         if (errno == EACCES)
-            return add_file(filepath, "", "", 8);
+            arraylist_add(files, filepath, "", "", 8, false, false);
     }
     
     /* get file type and color, 4 chars for the type */
@@ -469,14 +519,10 @@ long add_file_stat(char *filepath, int ftype)
     if (ftype == 1 || ftype == 2) {
         /* force if user is marking all files */
         bool force = ftype == 2 ? true : false;
-        long index = add_marked(filepath, type, force);
+        arraylist_add(marked, filepath, NULL, type, 8, true, force);
         /* free type and return without allocating more stuff */
         free(type);
-        if (index != -1) {
-            return index;   /* just marked */
-        } else {
-            return -1;      /* already marked */
-        }
+        return;
     }
 
     /* get last modified time */
@@ -511,13 +557,12 @@ long add_file_stat(char *filepath, int ftype)
     snprintf(total_stat, 45, "%-18s %-8s", time, size);
     total_stat[strlen(total_stat)] = '\0';
 
-    long index = add_file(filepath, total_stat, type, color);
+    arraylist_add(files, filepath, total_stat, type, color, false, false);
 
     free(time);
     free(size);
     free(total_stat);
     free(type);
-    return index;
 }
 
 
@@ -533,7 +578,7 @@ void highlight_current_line()
     }
 
     /* calculate range of files to show */
-    long range = files_len();
+    long range = files->length;
     /* not highlight if no files in directory */
     if (range == 0) {
         #if DRAW_PREVIEW
@@ -560,24 +605,24 @@ void highlight_current_line()
             wclear(panel);
             
             /* check for marked files */
-            long num_marked = marked_len();
+            long num_marked = marked->length;
             if (num_marked > 0) {
                 /* Determine length of formatted string */
                 int m_len = snprintf(NULL, 0, "[%ld] selected", num_marked);
                 char *selected = memalloc((m_len + 1) * sizeof(char));
 
                 snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
-                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files_len(), selected, cwd);
+                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files->length, selected, cwd);
             } else  {
-                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files_len(), cwd);
+                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files->length, cwd);
             }
         }
         /* print the actual filename and stats */
-        char *line = get_line(i);
-        int color = get_color(i);
+        char *line = get_line(files, i, file_details);
+        int color = files->items[i].color;
         /* check is file marked for action */
-        bool marked = in_marked(get_filepath(i));
-        if (marked) {
+        bool is_marked = arraylist_includes(marked, files->items[i].path);
+        if (is_marked) {
             /* show file is selected */
             wattron(directory_content, COLOR_PAIR(7));
         } else {
@@ -590,7 +635,7 @@ void highlight_current_line()
         else
             mvwprintw(directory_content, i, 0, "%s", line);
 
-        if (marked) {
+        if (is_marked) {
             wattroff(directory_content, COLOR_PAIR(7));
         } else {
             wattroff(directory_content, COLOR_PAIR(color));
@@ -616,14 +661,14 @@ void highlight_current_line()
 void show_file_content()
 {
     wclear(preview_content);
-    file *current_file = get_file((long) current_selection);
+    file current_file = files->items[current_selection];
 
-    if (strncmp(current_file->type, "DIR", 3) == 0)
+    if (strncmp(current_file.type, "DIR", 3) == 0)
         return;
 
-    FILE *file = fopen(current_file->path, "r");
+    FILE *file = fopen(current_file.path, "r");
     if (file == NULL) {
-        mvwprintw(preview_content, 0, 0, "Unable to read %s", current_file->path);
+        mvwprintw(preview_content, 0, 0, "Unable to read %s", current_file.path);
         return;
     }
     #if DRAW_BORDERS
@@ -673,7 +718,7 @@ void edit_file()
         def_prog_mode();    /* save the tty modes */
         endwin();           /* end curses mode temporarily */
 
-        char *filename = get_filepath(current_selection);
+        char *filename = files->items[current_selection].path;
         int length = strlen(editor) + strlen(filename) + 2; /* one for space one for null */
         char command[length];
 
@@ -685,7 +730,8 @@ void edit_file()
     }
 }
 
-int write_last_d() {
+int write_last_d()
+{
     #ifdef LAST_D
         char *last_d = memalloc(PATH_MAX * sizeof(char)); 
         strcpy(last_d, LAST_D);
