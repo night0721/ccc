@@ -102,12 +102,10 @@ void arraylist_add(ArrayList *list, char *filepath, char *stats, char *type, int
         if (marked) {
             for (int i = 0; i < list->length; i++) {
                 if (strcmp(list->items[i].path, new_file.path) == 0) {
-                    if (force) {
-                        return;
-                    } else {
+                    if (!force) {
                         arraylist_remove(list, i);
-                        return;
                     }
+                    return;
                 }
             }
         }
