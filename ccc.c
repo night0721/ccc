@@ -127,6 +127,10 @@ int main(int argc, char** argv)
                 strcpy(p_cwd, cwd);
                 char *last_slash = strrchr(cwd, '/');
                 if (last_slash != NULL) {
+                    if (last_slash == cwd) {
+                        strcpy(cwd, "/");
+                        change_dir(cwd, 0);
+                    }
                     *last_slash = '\0';
                     change_dir(cwd, 0);
                 }
@@ -449,7 +453,7 @@ void populate_files(const char *path, int ftype)
             strcat(filename, ep->d_name);
 
             /* use strncmp to filter out dotfiles */
-            if ((show_hidden && strncmp(filename, ".", 1) && strncmp(filename, "..", 2)) || (!show_hidden && strcmp(filename, ".") && strcmp(filename, ".."))) {
+            if ((!show_hidden && strncmp(filename, ".", 1) && strncmp(filename, "..", 2)) || (show_hidden && strcmp(filename, ".") && strcmp(filename, ".."))) {
                 /* construct full file path */
                 filename[0] = '\0';
                 strcat(filename, cwd);
