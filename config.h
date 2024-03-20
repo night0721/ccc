@@ -8,6 +8,7 @@
 
 #define DRAW_BORDERS true   /* Draw borders around windows? */
 #define DRAW_PREVIEW true   /* Draw file preview? */
+#define SHOW_HIDDEN true    /* show hidden files/dotfiles in preview */
 
 /* set width offset for windows:
 +-------------%-------------+

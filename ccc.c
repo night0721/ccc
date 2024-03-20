@@ -35,6 +35,7 @@ void draw_border_title(WINDOW *window, bool active);
 unsigned int focus = 0;
 long current_selection = 0;
 bool dirs_size = DIRS_SIZE;
+bool show_hidden = SHOW_HIDDEN;
 char *cwd;
 char *p_cwd; /* previous cwd */
 int half_width;
@@ -244,8 +245,16 @@ int main(int argc, char** argv)
                 change_dir(p_cwd, 0);
                 break;
 
+            /* show help */
             case '?':
                 show_help();
+                break;
+            
+            case '.':
+                show_hidden = !show_hidden;
+                clear_files();
+                populate_files(cwd, 0);
+                highlight_current_line();
                 break;
 
             /* mark one file */
@@ -430,8 +439,8 @@ void populate_files(const char *path, int ftype)
             filename[0] = '\0';
             strcat(filename, ep->d_name);
 
-            /* can't be strncmp as that would filter out the dotfiles */
-            if (strcmp(filename, ".") && strcmp(filename, "..")) {
+            /* use strncmp to filter out dotfiles */
+            if ((show_hidden && strncmp(filename, ".", 1) && strncmp(filename, "..", 2)) || (!show_hidden && strcmp(filename, ".") && strcmp(filename, ".."))) {
                 /* construct full file path */
                 filename[0] = '\0';
                 strcat(filename, cwd);
