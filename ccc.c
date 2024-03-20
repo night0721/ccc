@@ -16,6 +16,7 @@
 #include "config.h"
 
 /* functions' definitions */
+void show_help();
 void start_ccc();
 void change_dir(const char *buf, int selection);
 int mkdir_p(const char *destdir);
@@ -243,6 +244,10 @@ int main(int argc, char** argv)
                 change_dir(p_cwd, 0);
                 break;
 
+            case '?':
+                show_help();
+                break;
+
             /* mark one file */
             case SPACE:
                 add_file_stat(get_filepath(current_selection), 1);
@@ -312,6 +317,15 @@ int main(int argc, char** argv)
     clear_marked();
     endwin();
     return 0;
+}
+
+void show_help() {
+    wclear(directory_content);
+    wclear(preview_content);
+    wprintw(directory_content,"h: go to parent dir\nj: scroll down\nk: scroll up\nl: go to child dir\n\nleft:  go to parent dir\ndown:  scroll down\nup:    scroll up\nright: go to child dir\n\nenter: go to child dir/open file\nbackspace: go to parent dir\n\ngg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\nt: go to trash dir\n~: go to home dir\n-: go to previous dir\nz: refresh current dir\n\nA: show directory disk usage/block size\nspace: mark file\na: mark all files in directory\n\n?: show help\nq: exit");
+    wpprintw("Visit https://github.com/piotr-marendowski/ccc or use 'man ccc' for help");
+    wrefresh(directory_content);
+    wrefresh(preview_content);
 }
 
 void start_ccc()

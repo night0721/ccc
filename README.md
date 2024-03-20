@@ -49,29 +49,35 @@ $ sudo make install
 ## Usage
 
 ```
+h: go to parent dir
 j: scroll down
 k: scroll up
-h: go to parent dir
 l: go to child dir
 
+left:  go to parent dir
 down:  scroll down
 up:    scroll up
-left:  go to parent dir
 right: go to child dir
 
 enter: go to child dir/open file
 backspace: go to parent dir
 
-g: go to top
+gg: go to top
 G: go to bottom
 
-t: go to trash
-~: go to home
+ctrl+u: jump up
+ctrl+d: jump down
+
+t: go to trash dir
+~: go to home dir
+-: go to previous dir
 z: refresh current dir
 
+A: show directory disk usage/block size
 space: mark file
 a: mark all files in directory
 
+?: show help
 q: exit
 ```
 
