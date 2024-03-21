@@ -464,9 +464,6 @@ void populate_files(const char *path, int ftype)
     } else {
         perror("ccc");
     }
-    #if DRAW_BORDERS
-        draw_border_title(directory_border, true);
-    #endif
 }
 
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
@@ -573,6 +570,10 @@ void add_file_stat(char *filepath, int ftype)
  */
 void highlight_current_line()
 {
+    #if DRAW_BORDERS
+        draw_border_title(directory_border, true);
+    #endif
+
     long overflow = 0;
     if (current_selection > LINES - 4) {
         /* overflown */
