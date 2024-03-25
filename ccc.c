@@ -268,6 +268,7 @@ int main(int argc, char** argv)
             case 'i':
                 file_details = !file_details;
                 change_dir(cwd, 0, 0);
+                break;
 
             /* mark one file */
             case SPACE:
