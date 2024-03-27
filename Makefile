@@ -11,13 +11,13 @@ BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
 
 # Flags
-LDFLAGS = $(shell pkg-config --libs ncurses)
-CFLAGS = -O3 -march=native -mtune=native -pipe -s -std=c99 -pedantic -Wall $(shell pkg-config --cflags ncurses)
+LDFLAGS = $(shell pkg-config --libs ncursesw)
+CFLAGS = -O3 -march=native -mtune=native -pipe -s -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 $(shell pkg-config --cflags ncursesw)
 
-SRC = ccc.c util.c file.c
+SRC = ccc.c util.c file.c 
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC) -o $@
+	$(CC) $(SRC) -o $@ $(CFLAGS) $(LDFLAGS)
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)
