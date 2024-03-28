@@ -73,6 +73,8 @@ t: go to trash dir
 -: go to previous dir
 z: refresh current dir
 
+i: toggle file details
+
 A: show directory disk usage/block size
 space: mark file
 a: mark all files in directory
