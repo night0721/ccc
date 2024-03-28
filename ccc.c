@@ -54,6 +54,13 @@ int main(int argc, char** argv)
 {
     if (argc > 1 && strcmp(argv[1], "-h") == 0)
         die("Usage: ccc filename");
+    if (argc == 2) {
+        struct stat st;
+        if (lstat(argv[1], &st) != 0) {
+            perror("ccc");
+            die("Error from lstat");
+        }
+    }
 
     /* check if it is interactive shell */
     if (!isatty(STDIN_FILENO)) 
@@ -92,8 +99,12 @@ int main(int argc, char** argv)
     marked = arraylist_init(100);
 
     cwd = memalloc(PATH_MAX * sizeof(char));
+    if (argc == 2) {
+        strcpy(cwd, argv[1]);
+    } else {
+        getcwd(cwd, PATH_MAX);
+    }
     p_cwd = memalloc(PATH_MAX * sizeof(char));
-    getcwd(cwd, PATH_MAX);
     populate_files(cwd, 0);
     start_ccc();
 
