@@ -23,13 +23,11 @@ int mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 void add_file_stat(char *filepath, int ftype);
-char *get_file_mode(mode_t mode);
 void highlight_current_line();
 void show_file_content();
 void edit_file();
-void toggle_executable();
 int write_last_d();
-void wpprintw(const char *fmt, ...);
+void wpprintw(const char *line);
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
 
@@ -56,13 +54,6 @@ int main(int argc, char** argv)
 {
     if (argc > 1 && strcmp(argv[1], "-h") == 0)
         die("Usage: ccc filename");
-    if (argc == 2) {
-        struct stat st;
-        if (lstat(argv[1], &st) != 0) {
-            perror("ccc");
-            die("Error from lstat");
-        }
-    }
 
     /* check if it is interactive shell */
     if (!isatty(STDIN_FILENO)) 
@@ -101,14 +92,10 @@ int main(int argc, char** argv)
     marked = arraylist_init(100);
 
     cwd = memalloc(PATH_MAX * sizeof(char));
-    if (argc == 2) {
-        strcpy(cwd, argv[1]);
-    } else {
-        getcwd(cwd, PATH_MAX);
-    }
     p_cwd = memalloc(PATH_MAX * sizeof(char));
-    start_ccc();
+    getcwd(cwd, PATH_MAX);
     populate_files(cwd, 0);
+    start_ccc();
 
     int ch, ch2;
     while (1) {
@@ -281,11 +268,6 @@ int main(int argc, char** argv)
             case 'i':
                 file_details = !file_details;
                 change_dir(cwd, 0, 0);
-                break;
-
-            case 'X':
-                toggle_executable();
-                break;
 
             /* mark one file */
             case SPACE:
@@ -346,7 +328,6 @@ int main(int argc, char** argv)
                 delwin(panel);
                 endwin();
                 start_ccc(); 
-                highlight_current_line();
                 break;
             default:
                 break;
@@ -372,6 +353,7 @@ void start_ccc()
 {
     half_width = COLS / 2;
     init_windows();
+    highlight_current_line();
 }
 
 /*
@@ -391,8 +373,9 @@ void change_dir(const char *buf, int selection, int ftype)
     strcpy(cwd, buf_dup);
     arraylist_free(files);
     files = arraylist_init(100);
-    current_selection = selection;
     populate_files(cwd, ftype);
+    current_selection = selection;
+    highlight_current_line();
 }
 
 /*
@@ -478,10 +461,12 @@ void populate_files(const char *path, int ftype)
         }
         closedir(dp);
         wrefresh(directory_content);
-        highlight_current_line();
     } else {
         perror("ccc");
     }
+    #if DRAW_BORDERS
+        draw_border_title(directory_border, true);
+    #endif
 }
 
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
@@ -570,11 +555,8 @@ void add_file_stat(char *filepath, int ftype)
     /* display sizes */
     sprintf(size, "%.3g%s", bytes, units[unit]);
 
-    /* get file mode string */
-    char *mode_str = get_file_mode(file_stat.st_mode);
-
-    char *total_stat = memalloc(56 * sizeof(char));
-    snprintf(total_stat, 56, "%s %s %-8s", mode_str, time, size);
+    char *total_stat = memalloc(45 * sizeof(char));
+    snprintf(total_stat, 45, "%-18s %-8s", time, size);
     total_stat[strlen(total_stat)] = '\0';
 
     arraylist_add(files, filepath, total_stat, type, color, false, false);
@@ -583,39 +565,14 @@ void add_file_stat(char *filepath, int ftype)
     free(size);
     free(total_stat);
     free(type);
-    free(mode_str);
 }
 
-/*
- * get file mode string from stat mode
- * eg: drwxr-sr-x
- */
-char *get_file_mode(mode_t mode)
-{
-    char *mode_str = memalloc(sizeof(char) * 11);
-    mode_str[0] = S_ISDIR(mode) ? 'd' : '-'; // Check if it's a directory
-    mode_str[1] = (mode & S_IRUSR) ? 'r' : '-';
-    mode_str[2] = (mode & S_IWUSR) ? 'w' : '-';
-    mode_str[3] = (mode & S_IXUSR) ? 'x' : '-';
-    mode_str[4] = (mode & S_IRGRP) ? 'r' : '-';
-    mode_str[5] = (mode & S_IWGRP) ? 'w' : '-';
-    mode_str[6] = (mode & S_IXGRP) ? 'x' : '-';
-    mode_str[7] = (mode & S_IROTH) ? 'r' : '-';
-    mode_str[8] = (mode & S_IWOTH) ? 'w' : '-';
-    mode_str[9] = (mode & S_IXOTH) ? 'x' : '-';
-    mode_str[10] = '\0'; // Null terminator
-    return mode_str;
-}
 
 /*
  * Highlight current line by reversing the color
  */
 void highlight_current_line()
 {
-    #if DRAW_BORDERS
-        draw_border_title(directory_border, true);
-    #endif
-
     long overflow = 0;
     if (current_selection > LINES - 4) {
         /* overflown */
@@ -625,7 +582,7 @@ void highlight_current_line()
     /* calculate range of files to show */
     long range = files->length;
     /* not highlight if no files in directory */
-    if (range == 0 && errno == 0) {
+    if (range == 0) {
         #if DRAW_PREVIEW
             wprintw(preview_content, "empty directory");
             wrefresh(preview_content);
@@ -646,6 +603,9 @@ void highlight_current_line()
         if ((overflow == 0 && i == current_selection) || (overflow != 0 && i == current_selection)) {
             wattron(directory_content, A_REVERSE);
 
+            /* update the panel */
+            wclear(panel);
+            
             /* check for marked files */
             long num_marked = marked->length;
             if (num_marked > 0) {
@@ -654,9 +614,9 @@ void highlight_current_line()
                 char *selected = memalloc((m_len + 1) * sizeof(char));
 
                 snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
-                wpprintw("(%ld/%ld) %s %s", current_selection + 1, files->length, selected, cwd);
+                wprintw(panel, "(%ld/%ld) %s %s", current_selection + 1, files->length, selected, cwd);
             } else  {
-                wpprintw("(%ld/%ld) %s", current_selection + 1, files->length, cwd);
+                wprintw(panel, "(%ld/%ld) %s", current_selection + 1, files->length, cwd);
             }
         }
         /* print the actual filename and stats */
@@ -695,9 +655,6 @@ void highlight_current_line()
         show_file_content();
     #endif
     wrefresh(preview_content);
-    #if DRAW_BORDERS
-        draw_border_title(preview_border, true);
-    #endif
 }
 
 /*
@@ -716,7 +673,10 @@ void show_file_content()
         mvwprintw(preview_content, 0, 0, "Unable to read %s", current_file.path);
         return;
     }
-    
+    #if DRAW_BORDERS
+        draw_border_title(preview_border, true);
+    #endif
+
     int c;
     /* check if its binary */
     while ((c = fgetc(file)) != EOF) {
@@ -772,22 +732,6 @@ void edit_file()
     }
 }
 
-void toggle_executable()
-{
-    file current_file = files->items[current_selection];
-    struct stat st;
-    if (stat(current_file.path, &st) == -1) {
-        wpprintw("stat failed: %s\n", strerror(errno));
-    }
-    if (strncmp(current_file.type, "DIR", 3) == 0)
-        return;
-    /* chmod by xor executable bits */
-    if (chmod(current_file.path, st.st_mode ^ (S_IXUSR | S_IXGRP | S_IXOTH)) == -1) {
-        wpprintw("Error toggling executable: %s", strerror(errno));
-    }
-
-}
-
 int write_last_d()
 {
     #ifdef LAST_D
@@ -828,13 +772,10 @@ int write_last_d()
 /*
  * Print line to the panel
  */
-void wpprintw(const char *fmt, ...)
+void wpprintw(const char *line)
 {
-    va_list args;
-    va_start(args, fmt);
     wclear(panel);
-    vw_printw(panel, fmt, args);
-    va_end(args);
+    wprintw(panel, "%s", line);
     wrefresh(panel);
 }
 

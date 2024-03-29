@@ -132,27 +132,15 @@ char *get_line(ArrayList *list, long index, bool detail)
 {
     file file = list->items[index];
     char *name = strdup(file.path);
-    char *stats = NULL;
-    size_t length;
-    if (detail) {
-        stats = strdup(file.stats);
-        length = strlen(name) + strlen(stats) + 2;   /* one for space and one for null */
-        if (stats == NULL) {
-            perror("ccc");
-        }
-    } else {
-        length = strlen(name)  + 2;   /* one for space and one for null */
-    }
+    char *stats = strdup(file.stats);
+    size_t length = strlen(name) + strlen(stats) + 2;   /* one for space and one for null */
     char *line = memalloc(length * sizeof(char));
 
     name = basename(name);
-    if (name == NULL)
+    if (name == NULL || stats == NULL)
         perror("ccc");
-    if (detail) {
-        snprintf(line, length, "%s %s", stats, name);
-    } else {
-        snprintf(line, length, "%s", name);
-    }
+
+    snprintf(line, length, "%s %s", stats, name);
 
     return line;
 }
