@@ -42,6 +42,7 @@ long current_selection = 0;
 bool dirs_size = DIRS_SIZE;
 bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
+char *trash_dir;
 char *cwd;
 char *p_cwd; /* previous cwd */
 char *trash_dir;
@@ -242,7 +243,7 @@ int main(int argc, char** argv)
                 char *trash_dir = check_trash_dir();
                 if (trash_dir != NULL)
                     change_dir(trash_dir, 0, 0);
-               break;
+                break;
 
             /* show directories' sizes */
             case 'A':
