@@ -8,8 +8,12 @@
 
 #define DRAW_BORDERS true   /* Draw borders around windows? */
 #define DRAW_PREVIEW true   /* Draw file preview? */
+
 #define SHOW_HIDDEN true    /* show hidden files/dotfiles in preview */
-#define SHOW_DETAILS true    /* show file details */
+#define SHOW_DETAILS true   /* show file details */
+
+/* will create this directory if doesn't exist! */
+#define TRASH_DIR "~/.local/ccc/trash/"
 
 /* set width offset for windows:
 +-------------%-------------+

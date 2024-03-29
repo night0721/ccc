@@ -18,6 +18,7 @@
 /* functions' definitions */
 void show_help();
 void start_ccc();
+char *check_trash_dir();
 void change_dir(const char *buf, int selection, int ftype);
 int mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
@@ -39,8 +40,9 @@ long current_selection = 0;
 bool dirs_size = DIRS_SIZE;
 bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
+char *trash_dir;
 char *cwd;
-char *p_cwd; /* previous cwd */
+char *p_cwd;    /* previous cwd */
 int half_width;
 ArrayList *files;
 ArrayList *marked;
@@ -234,25 +236,9 @@ int main(int argc, char** argv)
 
             /* go to the trash dir */
             case 't':;
-                #ifdef TRASH_DIR
-                    char *trash_dir = TRASH_DIR;
-                #else
-                    char *trash_dir = getenv("CCC_TRASH");
-                #endif
-                if (trash_dir == NULL) {
-                    wpprintw("$CCC_TRASH is not defined");
-                } else {
-                    if (access(trash_dir, F_OK) != 0) {
-                        /* create the directory with 755 perm if it doesn't exit */
-                        if (mkdir_p(trash_dir) == -1) {
-                            switch (errno) {
-                                case EACCES:
-                                    wpprintw("Parent directory does not allow write permission or one of directories does not allow search access");
-                            }
-                        }
-                    }
+                char *trash_dir = check_trash_dir();
+                if (trash_dir != NULL)
                     change_dir(trash_dir, 0, 0);
-                }
                 break;
 
             /* show directories' sizes */
@@ -302,7 +288,10 @@ int main(int argc, char** argv)
             /* delete */
             case 'd':;
                 if (marked->length) {
-                    ;
+                    char *trash_dir = check_trash_dir();
+                    if (trash_dir != NULL)
+                        /* do your magic here */
+                        change_dir(trash_dir, 0, 0);
                 }
                 break;
 
@@ -372,6 +361,50 @@ void start_ccc()
 {
     half_width = COLS / 2;
     init_windows();
+}
+
+/* Checks if trash directory is set and returns it */
+char *check_trash_dir()
+{
+    char *path = memalloc(PATH_MAX * sizeof(char));
+
+    #ifdef TRASH_DIR
+        trash_dir = TRASH_DIR;
+    #endif
+
+    /* check if there is trash_dir */
+    if (trash_dir == NULL) {
+        wpprintw("No trash directory defined");
+        return NULL;
+    } else {
+        /* if trash_dir has ~ then make it $HOME */
+        /* use path as trash_dir */
+        if (trash_dir[0] == '~') {
+            char *home = getenv("HOME");
+            if (home == NULL) {
+                wpprintw("$HOME is not defined, can't read the trash directory");
+                return NULL;
+            }
+            /* replace ~ with home */
+            snprintf(path, PATH_MAX, "%s%s", home, trash_dir + 1);
+        }
+        else {
+            strcpy(path, trash_dir);
+        }
+
+        /* if has access to trash_dir */
+        if (access(path, F_OK) != 0) {
+            /* create the directory with 755 perm if it doesn't exit */
+            if (mkdir_p(path) == -1) {
+                switch (errno) {
+                    case EACCES:
+                        wpprintw("Parent directory does not allow write permission or one of directories does not allow search access");
+                        return NULL;
+                }
+            }
+        }
+    }
+    return path;
 }
 
 /*
