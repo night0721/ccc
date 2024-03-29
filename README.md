@@ -47,7 +47,6 @@ $ sudo make install
 ```
 
 ## Usage
-
 ```
 h: go to parent dir
 j: scroll down
@@ -74,6 +73,7 @@ t: go to trash dir
 z: refresh current dir
 
 i: toggle file details
+X: toggle executable
 
 A: show directory disk usage/block size
 space: mark file
