@@ -9,7 +9,8 @@
 #define DRAW_BORDERS true   /* Draw borders around windows? */
 #define DRAW_PREVIEW true   /* Draw file preview? */
 #define SHOW_HIDDEN true    /* show hidden files/dotfiles in preview */
-#define SHOW_DETAILS true    /* show file details */
+#define SHOW_DETAILS true   /* show file details */
+#define SHOW_ICONS true     /* show file icons */
 
 /* set width offset for windows:
 +-------------%-------------+
@@ -30,6 +31,9 @@ In COLS:
 
 /* File location to write last directory */
 #define LAST_D "~/.cache/ccc/.ccc_d"
+
+/* will create this directory if doesn't exist! */
+#define TRASH_DIR "~/.cache/ccc/trash/"
 
 /* Keybindings */
 #define CTRLD 0x04

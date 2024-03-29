@@ -7,6 +7,7 @@ typedef struct file {
     char *path;
     char *stats;
     char *type;
+    wchar_t *icon;
     int color;
 } file;
 
@@ -20,7 +21,7 @@ ArrayList *arraylist_init(size_t capacity);
 void arraylist_free(ArrayList *list);
 bool arraylist_includes(ArrayList *list, char *path);
 void arraylist_remove(ArrayList *list, long index);
-void arraylist_add(ArrayList *list, char *filepath, char *stats, char *type, int color, bool marked, bool force);
+void arraylist_add(ArrayList *list, char *filepath, char *stats, char *type, wchar_t *icon, int color, bool marked, bool force);
 char *get_line(ArrayList *list, long index, bool detail);
 
 #endif

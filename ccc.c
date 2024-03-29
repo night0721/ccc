@@ -10,6 +10,8 @@
 #include <ftw.h>
 #include <time.h>
 #include <ncurses.h>
+#include <locale.h>
+#include <wchar.h>
 
 #include "file.h"
 #include "util.h"
@@ -18,8 +20,9 @@
 /* functions' definitions */
 void show_help();
 void start_ccc();
+char *check_trash_dir();
 void change_dir(const char *buf, int selection, int ftype);
-int mkdir_p(const char *destdir);
+void mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 void add_file_stat(char *filepath, int ftype);
@@ -41,6 +44,7 @@ bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
 char *cwd;
 char *p_cwd; /* previous cwd */
+char *trash_dir;
 int half_width;
 ArrayList *files;
 ArrayList *marked;
@@ -71,6 +75,7 @@ int main(int argc, char** argv)
     /* initialize screen, don't print special chars,
      * make ctrl + c work, don't show cursor 
      * enable arrow keys */
+    setlocale(LC_ALL, "");
     initscr();
     noecho();
     cbreak();
@@ -234,26 +239,10 @@ int main(int argc, char** argv)
 
             /* go to the trash dir */
             case 't':;
-                #ifdef TRASH_DIR
-                    char *trash_dir = TRASH_DIR;
-                #else
-                    char *trash_dir = getenv("CCC_TRASH");
-                #endif
-                if (trash_dir == NULL) {
-                    wpprintw("$CCC_TRASH is not defined");
-                } else {
-                    if (access(trash_dir, F_OK) != 0) {
-                        /* create the directory with 755 perm if it doesn't exit */
-                        if (mkdir_p(trash_dir) == -1) {
-                            switch (errno) {
-                                case EACCES:
-                                    wpprintw("Parent directory does not allow write permission or one of directories does not allow search access");
-                            }
-                        }
-                    }
+                char *trash_dir = check_trash_dir();
+                if (trash_dir != NULL)
                     change_dir(trash_dir, 0, 0);
-                }
-                break;
+               break;
 
             /* show directories' sizes */
             case 'A':
@@ -302,7 +291,11 @@ int main(int argc, char** argv)
             /* delete */
             case 'd':;
                 if (marked->length) {
-                    ;
+                    char *trash_dir = check_trash_dir();
+                    if (trash_dir != NULL) {
+                        ;
+                        /* do your magic here */
+                    }
                 }
                 break;
 
@@ -374,6 +367,44 @@ void start_ccc()
     init_windows();
 }
 
+/* Checks if trash directory is set and returns it */
+char *check_trash_dir()
+{
+    char *path = memalloc(PATH_MAX * sizeof(char));
+
+    #ifdef TRASH_DIR
+        trash_dir = TRASH_DIR;
+    #endif
+
+    /* check if there is trash_dir */
+    if (trash_dir == NULL) {
+        wpprintw("No trash directory defined");
+        return NULL;
+    } else {
+        /* if trash_dir has ~ then make it $HOME */
+        /* use path as trash_dir */
+        if (trash_dir[0] == '~') {
+            char *home = getenv("HOME");
+            if (home == NULL) {
+                wpprintw("$HOME is not defined, can't read the trash directory");
+                return NULL;
+            }
+            /* replace ~ with home */
+            snprintf(path, PATH_MAX, "%s%s", home, trash_dir + 1);
+        }
+        else {
+            strcpy(path, trash_dir);
+        }
+
+        /* if has access to trash_dir */
+        if (access(path, F_OK) != 0) {
+            /* create the directory with 755 perm if it doesn't exit */
+            mkdir_p(path);        
+        }
+    }
+    return path;
+}
+
 /*
  * Change directory in window with selection
  */
@@ -399,7 +430,7 @@ void change_dir(const char *buf, int selection, int ftype)
  * Recursively create directory by creating each subdirectory
  * like mkdir -p
  */
-int mkdir_p(const char *destdir)
+void mkdir_p(const char *destdir)
 {
     char *path = memalloc(PATH_MAX * sizeof(char));
     char dir_path[PATH_MAX] = "";
@@ -408,7 +439,7 @@ int mkdir_p(const char *destdir)
         char *home = getenv("HOME");
         if (home == NULL) {
             wpprintw("$HOME is not defined");
-            return -1;
+            return;
         }
         /* replace ~ with home */
         snprintf(path, PATH_MAX, "%s%s", home, destdir + 1);
@@ -433,15 +464,15 @@ int mkdir_p(const char *destdir)
                 continue;
             }
             
-            perror("ccc");
+            wpprintw("mkdir failed: %s\n", strerror(errno));
             free(path);
-            return -1;
+            return;
         }
         token = strtok(NULL, "/");
     }
 
     free(path);
-    return 0;
+    return;
 }
 
 /*
@@ -493,7 +524,7 @@ int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, s
 /*
  * Get file's last modified time, size, type
  * Add that file into list
- * ftype: normal file = 0, normal marked = 1, marking ALL = 2
+ * ftype: normal file = 0, normal marked = 1, marked ALL = 2
  */
 void add_file_stat(char *filepath, int ftype)
 {
@@ -501,32 +532,35 @@ void add_file_stat(char *filepath, int ftype)
     if (stat(filepath, &file_stat) == -1) {
         /* can't be triggered? */
         if (errno == EACCES)
-            arraylist_add(files, filepath, "", "", 8, false, false);
+            arraylist_add(files, filepath, "", "", "", 8, false, false);
     }
     
-    /* get file type and color, 4 chars for the type */
+    /* get file type and color, 4 chars for the type and icon */
     char *type = memalloc(4 * sizeof(char));
+    wchar_t *icon = memalloc(2 * sizeof(wchar_t));
+    wcsncpy(icon, L"", 2);
     int color;
+
     if (S_ISDIR(file_stat.st_mode)) {
-        strcpy(type, "DIR");            /* directory type */
+        strncpy(type, "DIR", 4);        /* directory type */
         color = 5;                      /* blue color */
     } else if (S_ISREG(file_stat.st_mode)) {
-        strcpy(type, "REG");            /* regular file */
+        strncpy(type, "REG", 4);        /* regular file */
         color = 8;                      /* white color */
     } else if (S_ISLNK(file_stat.st_mode)) {
-        strcpy(type, "LNK");            /* symbolic link */
+        strncpy(type, "LNK", 4);        /* symbolic link */
         color = 3;                      /* green color */
     } else if (S_ISCHR(file_stat.st_mode)) {
-        strcpy(type, "CHR");            /* character device */
+        strncpy(type, "CHR", 4);        /* character device */
         color = 8;                      /* white color */
     } else if (S_ISSOCK(file_stat.st_mode)) {
-        strcpy(type, "SOC");            /* socket */
+        strncpy(type, "SOC", 4);        /* socket */
         color = 8;                      /* white color */
     } else if (S_ISBLK(file_stat.st_mode)) {
-        strcpy(type, "BLK");            /* block device */
+        strncpy(type, "BLK", 4);        /* block device */
         color = 4;                      /* yellow color */
     } else if (S_ISFIFO(file_stat.st_mode)) {
-        strcpy(type, "FIF");            /* FIFO */
+        strncpy(type, "FIF", 4);        /* FIFO */
         color = 8;                      /* white color */
     } else {
         color = 8;                      /* white color */
@@ -536,16 +570,16 @@ void add_file_stat(char *filepath, int ftype)
     if (ftype == 1 || ftype == 2) {
         /* force if user is marking all files */
         bool force = ftype == 2 ? true : false;
-        arraylist_add(marked, filepath, NULL, type, 8, true, force);
+        arraylist_add(marked, filepath, NULL, type, icon, 8, true, force);
         /* free type and return without allocating more stuff */
         free(type);
         return;
     }
 
     /* get last modified time */
-    char *time = memalloc(20 * sizeof(char));
+    char *time = memalloc(17 * sizeof(char));
     /* format last modified time to a string */
-    strftime(time, 20, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
+    strftime(time, 17, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
     
     /* get file size */
     double bytes = file_stat.st_size;
@@ -560,7 +594,7 @@ void add_file_stat(char *filepath, int ftype)
         }
     }
     /* max 25 chars due to long, space, suffix and null */
-    char *size = memalloc(25 * sizeof(char));
+    char *size = memalloc(8 * sizeof(char));
     int unit = 0;
     const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
     while (bytes > 1024) {
@@ -573,17 +607,18 @@ void add_file_stat(char *filepath, int ftype)
     /* get file mode string */
     char *mode_str = get_file_mode(file_stat.st_mode);
 
-    char *total_stat = memalloc(56 * sizeof(char));
-    snprintf(total_stat, 56, "%s %s %-8s", mode_str, time, size);
-    total_stat[strlen(total_stat)] = '\0';
+    /* 11 + 17 + 8 + 1 for null */
+    char *total_stat = memalloc(37 * sizeof(char));
+    snprintf(total_stat, 37, "%s %s %-8s", mode_str, time, size);
 
-    arraylist_add(files, filepath, total_stat, type, color, false, false);
+    arraylist_add(files, filepath, total_stat, type, icon, color, false, false);
 
     free(time);
     free(size);
     free(total_stat);
     free(type);
     free(mode_str);
+    free(icon);
 }
 
 /*
@@ -593,7 +628,7 @@ void add_file_stat(char *filepath, int ftype)
 char *get_file_mode(mode_t mode)
 {
     char *mode_str = memalloc(sizeof(char) * 11);
-    mode_str[0] = S_ISDIR(mode) ? 'd' : '-'; // Check if it's a directory
+    mode_str[0] = S_ISDIR(mode) ? 'd' : '-'; /* Check if it's a directory */
     mode_str[1] = (mode & S_IRUSR) ? 'r' : '-';
     mode_str[2] = (mode & S_IWUSR) ? 'w' : '-';
     mode_str[3] = (mode & S_IXUSR) ? 'x' : '-';
@@ -603,7 +638,7 @@ char *get_file_mode(mode_t mode)
     mode_str[7] = (mode & S_IROTH) ? 'r' : '-';
     mode_str[8] = (mode & S_IWOTH) ? 'w' : '-';
     mode_str[9] = (mode & S_IXOTH) ? 'x' : '-';
-    mode_str[10] = '\0'; // Null terminator
+    mode_str[10] = '\0';
     return mode_str;
 }
 
@@ -694,10 +729,10 @@ void highlight_current_line()
     #if DRAW_PREVIEW
         show_file_content();
     #endif
-    wrefresh(preview_content);
     #if DRAW_BORDERS
         draw_border_title(preview_border, true);
     #endif
+    wrefresh(preview_content);
 }
 
 /*
