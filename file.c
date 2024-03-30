@@ -129,23 +129,26 @@ char *get_line(ArrayList *list, long index, bool detail)
 {
     file file = list->items[index];
     char *name = strdup(file.path);
+    name = basename(name);
+    if (name == NULL)
+        perror("ccc");
+
     wchar_t *icon = wcsdup(file.icon);
+
     char *stats = NULL;
     size_t length;
     if (detail) {
         stats = strdup(file.stats);
-        length = strlen(name) + strlen(stats) + 2;   /* one for space and one for null */
+        length = strlen(name) + strlen(stats) + 7;   /* 4 for icon, 2 for space and 1 for null */
         if (stats == NULL) {
             perror("ccc");
         }
     } else {
-        length = strlen(name) + 2;   /* one for space and one for null */
+        length = strlen(name) + 6;   /* 4 for icon, 1 for space and 1 for null */
     }
     char *line = memalloc(length * sizeof(char));
 
-    name = basename(name);
-    if (name == NULL)
-        perror("ccc");
+   
 
     if (detail) {
         snprintf(line, length, "%s %ls %s", stats, icon, name);
