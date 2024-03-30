@@ -539,11 +539,14 @@ void add_file_stat(char *filepath, int ftype)
     }
     
     /* get file type and color, 4 chars for the type and icon */
-    char *type = memalloc(4 * sizeof(char));
-    wchar_t *icon_str = memalloc(2 * sizeof(wchar_t));
+    size_t type_size = 4 * sizeof(char);
+    size_t icon_size = 2 * sizeof(wchar_t);
+
+    char *type = memalloc(type_size);
+    wchar_t *icon_str = memalloc(icon_size);
 
     filepath[strlen(filepath)] = '\0';
-    /* find last / in path */
+    /* find last / in path by finding basename */
     char *f_bname = strrchr(filepath, '/');
     char *ext = NULL;
     if (f_bname != NULL) {
@@ -564,7 +567,7 @@ void add_file_stat(char *filepath, int ftype)
         else 
             wcsncpy(icon_str, ext_icon->icon, 2);
     } else {
-        wcsncpy(icon_str, L"0", 2);
+        wcsncpy(icon_str, L"", 2);
     }
 
     int color;
@@ -605,9 +608,10 @@ void add_file_stat(char *filepath, int ftype)
     }
 
     /* get last modified time */
-    char *time = memalloc(17 * sizeof(char));
+    size_t time_size = 17 * sizeof(char);
+    char *time = memalloc(time_size);
     /* format last modified time to a string */
-    strftime(time, 17, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
+    strftime(time, time_size, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
     
     /* get file size */
     double bytes = file_stat.st_size;
@@ -621,8 +625,8 @@ void add_file_stat(char *filepath, int ftype)
             bytes = total_dir_size;
         }
     }
-    /* 3 before decimal + 1 decimal + SIZE_OFFSET (after decimal) + 1 space + 1 null */
-    int size_size = 3 + 1 + DECIMAL_PLACES + 1 + 1;
+    /* 4 before decimal + 1 dot + DECIMAL_PLACES (after decimal) + unit length(1 for K, 3 for KiB, taking units[1] as B never changes)+ 1 space + 1 null */
+    int size_size = 4 + 1 + DECIMAL_PLACES + strlen(units[1]) + 1 + 1;
     char *size = memalloc(size_size * sizeof(char));
     int unit = 0;
     while (bytes > 1024) {
@@ -638,10 +642,10 @@ void add_file_stat(char *filepath, int ftype)
     /* get file mode string */
     char *mode_str = get_file_mode(file_stat.st_mode);
 
-    /* 11 + 17 + size_size + 1 space + 1 null */
-    int stat_size = 11 + 17 + size_size + 1 + 1;
-    char *total_stat = memalloc(stat_size * sizeof(char));
-    snprintf(total_stat, stat_size, "%s %s %-*s ", mode_str, time, size_size, size);
+    /* mode_str(11) + time(17) + size_size + 2 spaces + 1 null */
+    size_t stat_size = 11 * sizeof(char) + time_size + size_size + 3 * sizeof(char);
+    char *total_stat = memalloc(stat_size);
+    snprintf(total_stat, stat_size, "%s %s %-*s", mode_str, time, size_size, size);
 
     arraylist_add(files, filepath, total_stat, type, icon_str, color, false, false);
 
@@ -659,7 +663,7 @@ void add_file_stat(char *filepath, int ftype)
  */
 char *get_file_mode(mode_t mode)
 {
-    char *mode_str = memalloc(sizeof(char) * 11);
+    char *mode_str = memalloc(11 * sizeof(char));
     mode_str[0] = S_ISDIR(mode) ? 'd' : '-'; /* Check if it's a directory */
     mode_str[1] = (mode & S_IRUSR) ? 'r' : '-';
     mode_str[2] = (mode & S_IWUSR) ? 'w' : '-';

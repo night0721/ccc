@@ -1,5 +1,3 @@
-#include "icons.h"
-
 /* Settings */
 #define PH 1                /* panel height */
 #define JUMP_NUM 14         /* how long ctrl + u/d jump are */
@@ -32,7 +30,8 @@ In COLS:
 #define SHOW_ICONS true     /* show file icons at startup */
 
 /* Calculate directories' sizes RECURSIVELY upon entering
-   `A` keybind at the startup */
+   `A` keybind at the startup
+ **VERY EXPENSIVE**, **CAN TAKE UP TO A MINUTE IN ROOT** */
 #define DIRS_SIZE false
 
 /* Default text editor */

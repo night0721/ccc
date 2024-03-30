@@ -44,7 +44,6 @@ void hashtable_init()
     strcpy(hpp->name, "hpp");
     hpp->icon = L"󰰀";
 
-
     icon *md = memalloc(sizeof(icon));
     strcpy(md->name, "md");
     md->icon = L"";
@@ -108,6 +107,14 @@ void hashtable_init()
     icon *lua = memalloc(sizeof(icon));
     strcpy(lua->name, "lua");
     lua->icon = L"";
+    
+    icon *license = memalloc(sizeof(icon));
+    strcpy(license->name, "LICENSE");
+    license->icon = L"";
+
+    icon *gitignore = memalloc(sizeof(icon));
+    strcpy(gitignore->name, "gitignore");
+    gitignore->icon = L"";
 
     hashtable_add(c);
     hashtable_add(h);
@@ -129,6 +136,8 @@ void hashtable_init()
     hashtable_add(rb);
     hashtable_add(iso);
     hashtable_add(lua);
+    hashtable_add(license);
+    hashtable_add(gitignore);
 }
 
 void hashtable_print()
