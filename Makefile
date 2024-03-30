@@ -16,7 +16,7 @@ CFLAGS = -O3 -march=native -mtune=native -pipe -s -std=c99 -pedantic -Wall -D_DE
 
 SRC = ccc.c util.c file.c icons.c
 
-$(TARGET): $(SRC)
+$(TARGET): $(SRC) $(CONF)
 	$(CC) $(SRC) -o $@ $(CFLAGS) $(LDFLAGS)
 
 dist:

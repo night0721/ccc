@@ -1,21 +1,15 @@
 #include "icons.h"
 
 /* Settings */
-#define PH 1            /* panel height */
-#define JUMP_NUM 14     /* how long ctrl + u/d jump are */
-#define PATH_MAX 4096
+#define PH 1                /* panel height */
+#define JUMP_NUM 14         /* how long ctrl + u/d jump are */
+#define PATH_MAX 4096       /* max length of the path */
+#define DECIMAL_PLACES 1    /* how many decimal places show size with */
 
-/* Calculate directories' sizes RECURSIVELY upon entering? */
-#define DIRS_SIZE false
+/* Size units */
+const char* units[] = {"B", "K", "M", "G", "T", "P"};
 
-#define DRAW_BORDERS true   /* Draw borders around windows? */
-#define DRAW_PREVIEW true   /* Draw file preview? */
-
-#define SHOW_HIDDEN true    /* show hidden files/dotfiles in preview */
-#define SHOW_DETAILS true   /* show file details */
-#define SHOW_ICONS true     /* show file icons */
-
-/* set width offset for windows:
+/* Set width offset for windows:
 +-------------%-------------+
 |             %             |
 |    files    %   preview   |
@@ -29,13 +23,25 @@ In COLS:
 -15 will make preview bigger */
 #define WINDOW_OFFSET 0
 
+/* Options */
+#define DRAW_BORDERS true   /* draw borders around windows */
+#define DRAW_PREVIEW true   /* draw file preview */
+
+#define SHOW_HIDDEN true    /* show hidden files/dotfiles at startup */
+#define SHOW_DETAILS true   /* show file details at startup */
+#define SHOW_ICONS true     /* show file icons at startup */
+
+/* Calculate directories' sizes RECURSIVELY upon entering
+   `A` keybind at the startup */
+#define DIRS_SIZE false
+
 /* Default text editor */
 #define EDITOR "nvim"
 
 /* File location to write last directory */
 #define LAST_D "~/.cache/ccc/.ccc_d"
 
-/* will create this directory if doesn't exist! */
+/* Will create this directory if doesn't exist! */
 #define TRASH_DIR "~/.cache/ccc/trash/"
 
 /* Keybindings */

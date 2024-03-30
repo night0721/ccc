@@ -44,6 +44,7 @@ void hashtable_init()
     strcpy(hpp->name, "hpp");
     hpp->icon = L"󰰀";
 
+
     icon *md = memalloc(sizeof(icon));
     strcpy(md->name, "md");
     md->icon = L"";

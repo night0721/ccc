@@ -621,28 +621,27 @@ void add_file_stat(char *filepath, int ftype)
             bytes = total_dir_size;
         }
     }
-    /* max 25 chars due to long, space, suffix and null */
-    char *size = memalloc(8 * sizeof(char));
+    /* 3 before decimal + 1 decimal + SIZE_OFFSET (after decimal) + 1 space + 1 null */
+    int size_size = 3 + 1 + DECIMAL_PLACES + 1 + 1;
+    char *size = memalloc(size_size * sizeof(char));
     int unit = 0;
-    const char* units[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
     while (bytes > 1024) {
         bytes /= 1024;
         unit++;
     }
-    /* display sizes */
-    /* Check if there are decimal places */
+    /* display sizes and check if there are decimal places */
     if (bytes == (unsigned int) bytes) {
         sprintf(size, "%d%s", (unsigned int) bytes, units[unit]);
     } else {
-        sprintf(size, "%.2f%s", bytes, units[unit]);
+        sprintf(size, "%.*f%s", DECIMAL_PLACES, bytes, units[unit]);
     }
-
     /* get file mode string */
     char *mode_str = get_file_mode(file_stat.st_mode);
 
-    /* 11 + 17 + 8 + 1 for null */
-    char *total_stat = memalloc(37 * sizeof(char));
-    snprintf(total_stat, 37, "%s %s %-8s", mode_str, time, size);
+    /* 11 + 17 + size_size + 1 space + 1 null */
+    int stat_size = 11 + 17 + size_size + 1 + 1;
+    char *total_stat = memalloc(stat_size * sizeof(char));
+    snprintf(total_stat, stat_size, "%s %s %-*s ", mode_str, time, size_size, size);
 
     arraylist_add(files, filepath, total_stat, type, icon_str, color, false, false);
 
