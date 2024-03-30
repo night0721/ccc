@@ -147,8 +147,6 @@ char *get_line(ArrayList *list, long index, bool detail)
     if (name == NULL)
         perror("ccc");
 
-    /*printf("%ls", icon);*/
-
     if (detail) {
         snprintf(line, length, "%s %ls %s", stats, icon, name);
     } else {
