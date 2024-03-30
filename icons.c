@@ -20,7 +20,6 @@ unsigned int hash(char *name)
         hash_value = (hash_value * name[i]) % TABLE_SIZE;
     }
 
-    printf("Name: %s | Hash Value: %d\n", name, hash_value);
     return hash_value;
 }
 
@@ -50,69 +49,70 @@ void hashtable_init()
     md->icon = L"";
 
     icon *py = memalloc(sizeof(icon));
-    strcpy(md->name, "py");
-    md->icon = L"";
+    strcpy(py->name, "py");
+    py->icon = L"";
 
     icon *java = memalloc(sizeof(icon));
-    strcpy(md->name, "java");
-    md->icon = L"";
+    strcpy(java->name, "java");
+    java->icon = L"";
 
     icon *json = memalloc(sizeof(icon));
-    strcpy(md->name, "json");
-    md->icon = L"";
+    strcpy(json->name, "json");
+    json->icon = L"";
 
     icon *js = memalloc(sizeof(icon));
-    strcpy(md->name, "js");
-    md->icon = L"";
+    strcpy(js->name, "js");
+    js->icon = L"";
 
     icon *html = memalloc(sizeof(icon));
-    strcpy(md->name, "html");
-    md->icon = L"";
+    strcpy(html->name, "html");
+    html->icon = L"";
 
     icon *rs = memalloc(sizeof(icon));
-    strcpy(md->name, "rs");
-    md->icon = L"";
+    strcpy(rs->name, "rs");
+    rs->icon = L"";
 
     icon *sh = memalloc(sizeof(icon));
-    strcpy(md->name, "sh");
-    md->icon = L"";
+    strcpy(sh->name, "sh");
+    sh->icon = L"";
 
     icon *go = memalloc(sizeof(icon));
-    strcpy(md->name, "go");
-    md->icon = L"";
+    strcpy(go->name, "go");
+    go->icon = L"";
 
     icon *r = memalloc(sizeof(icon));
-    strcpy(md->name, "r");
-    md->icon = L"";
+    strcpy(r->name, "r");
+    r->icon = L"";
 
     icon *diff = memalloc(sizeof(icon));
-    strcpy(md->name, "diff");
-    md->icon = L"";
+    strcpy(diff->name, "diff");
+    diff->icon = L"";
 
     icon *hs = memalloc(sizeof(icon));
-    strcpy(md->name, "hs");
-    md->icon = L"";
+    strcpy(hs->name, "hs");
+    hs->icon = L"";
 
     icon *log = memalloc(sizeof(icon));
-    strcpy(md->name, "log");
-    md->icon = L"󱀂";
+    strcpy(log->name, "log");
+    log->icon = L"󱀂";
 
     icon *rb = memalloc(sizeof(icon));
-    strcpy(md->name, "rb");
-    md->icon = L"";
+    strcpy(rb->name, "rb");
+    rb->icon = L"";
 
     icon *iso = memalloc(sizeof(icon));
-    strcpy(md->name, "iso");
-    md->icon = L"󰻂";
+    strcpy(iso->name, "iso");
+    iso->icon = L"󰻂";
 
     icon *lua = memalloc(sizeof(icon));
-    strcpy(md->name, "lua");
-    md->icon = L"";
+    strcpy(lua->name, "lua");
+    lua->icon = L"";
 
     hashtable_add(c);
     hashtable_add(h);
     hashtable_add(cpp);
     hashtable_add(hpp);
+    hashtable_add(md);
     hashtable_add(py);
     hashtable_add(java);
     hashtable_add(json);

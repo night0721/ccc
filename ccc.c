@@ -630,7 +630,12 @@ void add_file_stat(char *filepath, int ftype)
         unit++;
     }
     /* display sizes */
-    sprintf(size, "%.3g%s", bytes, units[unit]);
+    /* Check if there are decimal places */
+    if (bytes == (unsigned int) bytes) {
+        sprintf(size, "%d%s", (unsigned int) bytes, units[unit]);
+    } else {
+        sprintf(size, "%.2f%s", bytes, units[unit]);
+    }
 
     /* get file mode string */
     char *mode_str = get_file_mode(file_stat.st_mode);

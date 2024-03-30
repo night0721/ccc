@@ -5,7 +5,7 @@
 #include <wchar.h>
 
 #define MAX_NAME 30
-#define TABLE_SIZE 50
+#define TABLE_SIZE 100
 
 typedef struct {
     char name[MAX_NAME];
