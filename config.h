@@ -1,3 +1,5 @@
+#include "icons.h"
+
 /* Settings */
 #define PH 1            /* panel height */
 #define JUMP_NUM 14     /* how long ctrl + u/d jump are */

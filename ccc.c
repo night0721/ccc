@@ -13,9 +13,10 @@
 #include <locale.h>
 #include <wchar.h>
 
-#include "file.h"
-#include "util.h"
 #include "config.h"
+#include "file.h"
+#include "icons.h"
+#include "util.h"
 
 /* functions' definitions */
 void show_help();
@@ -105,6 +106,7 @@ int main(int argc, char** argv)
     /* init files and marked arrays */
     files = arraylist_init(100);
     marked = arraylist_init(100);
+    hashtable_init();
 
     cwd = memalloc(PATH_MAX * sizeof(char));
     if (argc == 2) {
@@ -533,13 +535,38 @@ void add_file_stat(char *filepath, int ftype)
     if (stat(filepath, &file_stat) == -1) {
         /* can't be triggered? */
         if (errno == EACCES)
-            arraylist_add(files, filepath, "", "", "", 8, false, false);
+            arraylist_add(files, filepath, NULL, NULL, NULL, 8, false, false);
     }
     
     /* get file type and color, 4 chars for the type and icon */
     char *type = memalloc(4 * sizeof(char));
-    wchar_t *icon = memalloc(2 * sizeof(wchar_t));
-    wcsncpy(icon, L"", 2);
+    wchar_t *icon_str = memalloc(2 * sizeof(wchar_t));
+
+    filepath[strlen(filepath)] = '\0';
+    /* find last / in path */
+    char *f_bname = strrchr(filepath, '/');
+    char *ext = NULL;
+    if (f_bname != NULL) {
+        /* shift 1 to get basename */
+        f_bname += 1;
+        /* handle file without extension */
+        ext = strrchr(f_bname, '.');
+        if (ext != NULL) {
+            ext += 1;
+        } else {
+            ext = f_bname;
+        }
+    }
+    if (ext != NULL) {
+        icon *ext_icon = hashtable_search(ext);
+        if (ext_icon == NULL)
+            wcsncpy(icon_str, L"", 2);
+        else 
+            wcsncpy(icon_str, ext_icon->icon, 2);
+    } else {
+        wcsncpy(icon_str, L"0", 2);
+    }
+
     int color;
 
     if (S_ISDIR(file_stat.st_mode)) {
@@ -571,7 +598,7 @@ void add_file_stat(char *filepath, int ftype)
     if (ftype == 1 || ftype == 2) {
         /* force if user is marking all files */
         bool force = ftype == 2 ? true : false;
-        arraylist_add(marked, filepath, NULL, type, icon, 8, true, force);
+        arraylist_add(marked, filepath, NULL, type, icon_str, 8, true, force);
         /* free type and return without allocating more stuff */
         free(type);
         return;
@@ -612,14 +639,14 @@ void add_file_stat(char *filepath, int ftype)
     char *total_stat = memalloc(37 * sizeof(char));
     snprintf(total_stat, 37, "%s %s %-8s", mode_str, time, size);
 
-    arraylist_add(files, filepath, total_stat, type, icon, color, false, false);
+    arraylist_add(files, filepath, total_stat, type, icon_str, color, false, false);
 
     free(time);
     free(size);
     free(total_stat);
     free(type);
     free(mode_str);
-    free(icon);
+    free(icon_str);
 }
 
 /*

@@ -26,8 +26,8 @@ void arraylist_free(ArrayList *list)
             free(list->items[i].path);
         if (list->items[i].stats != NULL)
             free(list->items[i].stats);
-        /*if (list->items[i].icon != NULL)
-            free(list->items[i].icon);*/
+        if (list->items[i].icon != NULL)
+            free(list->items[i].icon);
     }
 
     free(list->items);
