@@ -40,6 +40,7 @@ void draw_border_title(WINDOW *window, bool active);
 /* global variables */
 unsigned int focus = 0;
 long current_selection = 0;
+bool to_open_file = false;
 bool dirs_size = DIRS_SIZE;
 bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
@@ -69,9 +70,12 @@ int main(int argc, char** argv)
             die("Error from lstat");
         }
         /* chdir to directory from argument */
-        if(S_ISDIR(st.st_mode) && chdir(argv[1])) {
+        if (S_ISDIR(st.st_mode) && chdir(argv[1])) {
             perror("ccc");
             die("Error from chdir");
+        }
+        if (S_ISREG(st.st_mode)) {
+            to_open_file = true;
         }
     }
 
@@ -117,7 +121,12 @@ int main(int argc, char** argv)
     getcwd(cwd, PATH_MAX);
     p_cwd = memalloc(PATH_MAX * sizeof(char));
     start_ccc();
+    
     populate_files(cwd, 0);
+    if (to_open_file) {
+        current_selection = arraylist_search(files, argv[1], true);
+        highlight_current_line();
+    }
 
     int ch, ch2;
     while (1) {
@@ -735,7 +744,7 @@ void highlight_current_line()
         char *line = get_line(files, i, file_details);
         int color = files->items[i].color;
         /* check is file marked for action */
-        bool is_marked = arraylist_includes(marked, files->items[i].path);
+        bool is_marked = arraylist_search(marked, files->items[i].path, false) != -1;
         if (is_marked) {
             /* show file is selected */
             wattron(directory_content, COLOR_PAIR(7));

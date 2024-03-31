@@ -34,15 +34,21 @@ void arraylist_free(ArrayList *list)
     list->length = 0;
 }
 
-bool arraylist_includes(ArrayList *list, char *path)
+long arraylist_search(ArrayList *list, char *path, bool bname)
 {
-    for (int i = 0; i < list->length; i++) {
-        if (strcmp(list->items[i].path, path) == 0) {
-            return true;
+    for (long i = 0; i < list->length; i++) {
+        if (!bname && strcmp(list->items[i].path, path) == 0) {
+            return i;
+        }
+        if (bname) {
+            char *fbname = basename(list->items[i].path);
+            if (fbname != NULL && strcmp(fbname, path) == 0) {
+                return i;
+            }
         }
     }
 
-    return false;
+    return -1;
 }
 
 void arraylist_remove(ArrayList *list, long index)
