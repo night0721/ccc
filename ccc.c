@@ -64,9 +64,14 @@ int main(int argc, char** argv)
         die("Usage: ccc filename");
     if (argc == 2) {
         struct stat st;
-        if (lstat(argv[1], &st) != 0) {
+        if (lstat(argv[1], &st)) {
             perror("ccc");
             die("Error from lstat");
+        }
+        /* chdir to directory from argument */
+        if(S_ISDIR(st.st_mode) && chdir(argv[1])) {
+            perror("ccc");
+            die("Error from chdir");
         }
     }
 
@@ -109,11 +114,7 @@ int main(int argc, char** argv)
     hashtable_init();
 
     cwd = memalloc(PATH_MAX * sizeof(char));
-    if (argc == 2) {
-        strcpy(cwd, argv[1]);
-    } else {
-        getcwd(cwd, PATH_MAX);
-    }
+    getcwd(cwd, PATH_MAX);
     p_cwd = memalloc(PATH_MAX * sizeof(char));
     start_ccc();
     populate_files(cwd, 0);
