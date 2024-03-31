@@ -20,10 +20,12 @@ ArrayList *arraylist_init(size_t capacity)
 void arraylist_free(ArrayList *list)
 {
     for (size_t i = 0; i < list->length; i++) {
-        if (list->items[i].type != NULL)
-            free(list->items[i].type);
+        if (list->items[i].path != NULL)
+            free(list->items[i].filename);
         if (list->items[i].path != NULL)
             free(list->items[i].path);
+        if (list->items[i].type != NULL)
+            free(list->items[i].type);
         if (list->items[i].stats != NULL)
             free(list->items[i].stats);
         if (list->items[i].icon != NULL)
@@ -34,10 +36,15 @@ void arraylist_free(ArrayList *list)
     list->length = 0;
 }
 
-bool arraylist_includes(ArrayList *list, char *path)
+/*
+ * Check if the file is in the arraylist
+ */
+bool arraylist_includes(ArrayList *list, char* filename, char *path)
 {
+    char *current_whole_path = strcat(path, filename);
     for (int i = 0; i < list->length; i++) {
-        if (strcmp(list->items[i].path, path) == 0) {
+        char *list_whole_path = strcat(list->items[i].path, list->items[i].filename);
+        if (strcmp(list_whole_path, current_whole_path) == 0) {
             return true;
         }
     }
@@ -50,6 +57,7 @@ void arraylist_remove(ArrayList *list, long index)
     if (index >= list->length)
         return;
 
+    free(list->items[index].filename);
     free(list->items[index].path);
     free(list->items[index].stats);
     free(list->items[index].type);
@@ -64,41 +72,49 @@ void arraylist_remove(ArrayList *list, long index)
 /*
  * Force will not remove duplicate marked files, instead it just skip adding
  */
-void arraylist_add(ArrayList *list, char *filepath, char *stats, char *type, wchar_t *icon, int color, bool marked, bool force)
+void arraylist_add(ArrayList *list, char *filename, char *path, char *stats, char *type, wchar_t *icon, int color, bool marked, bool force)
 {
-    char *filepath_cp = NULL;
+    char *filename_cp = NULL;
+    char *path_cp = NULL;
     char *stats_cp = NULL;
     char *type_cp = NULL;
     wchar_t *icon_cp = NULL;
 
-    if (filepath != NULL) {
-        filepath_cp = strdup(filepath);
-        if (filepath_cp == NULL)
-            perror("ccc");
+    if (filename_cp != NULL) {
+        filename_cp = strdup(filename_cp);
+        if (filename_cp == NULL)
+            perror("can't add filename to arraylist");
+    }
+    if (path_cp != NULL) {
+        path_cp = strdup(path_cp);
+        if (path_cp == NULL)
+            perror("can't add path to arraylist");
     }
     if (stats != NULL) {
         stats_cp = strdup(stats);
         if (stats_cp == NULL)
-            perror("ccc");
+            perror("can't add stats to arraylist");
     }
     if (type != NULL) {
         type_cp = strdup(type);
         if (type_cp == NULL)
-            perror("ccc");
+            perror("can't add type to arraylist");
     }
     if (icon != NULL) {
         icon_cp = wcsdup(icon);
         if (icon_cp == NULL)
-            perror("ccc");
+            perror("can't add icon to arraylist");
     }
 
-    /* path, stats, type, icon, color */
-    file new_file = { filepath_cp, stats_cp, type_cp, icon_cp, color };
+    /* filename, path, stats, type, icon, color */
+    file new_file = { filename_cp, path_cp, stats_cp, type_cp, icon_cp, color };
 
     if (list->capacity != list->length) {
         if (marked) {
             for (int i = 0; i < list->length; i++) {
-                if (strcmp(list->items[i].path, new_file.path) == 0) {
+                char *list_whole_path = strcat(list->items[i].path, list->items[i].filename);
+                char *current_whole_path = strcat(new_file.path, new_file.filename);
+                if (strcmp(list_whole_path, current_whole_path) == 0) {
                     if (!force)
                         arraylist_remove(list, i);
                     return;
@@ -147,9 +163,7 @@ char *get_line(ArrayList *list, long index, bool detail)
         length = strlen(name) + 6;   /* 4 for icon, 1 for space and 1 for null */
     }
     char *line = memalloc(length * sizeof(char));
-
    
-
     if (detail) {
         snprintf(line, length, "%s %ls %s", stats, icon, name);
     } else {

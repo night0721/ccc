@@ -5,7 +5,7 @@
 #define DECIMAL_PLACES 1    /* how many decimal places show size with */
 
 /* Size units */
-const char* units[] = {"B", "K", "M", "G", "T", "P"};
+static const char* units[] = {"B", "K", "M", "G", "T", "P"};
 
 /* Set width offset for windows:
 +-------------%-------------+
