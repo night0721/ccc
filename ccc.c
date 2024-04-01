@@ -44,6 +44,7 @@ bool to_open_file = false;
 bool dirs_size = DIRS_SIZE;
 bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
+char *argv_cp;
 char *trash_dir;
 char *cwd;
 char *p_cwd; /* previous cwd */
@@ -73,9 +74,14 @@ int main(int argc, char** argv)
         if (S_ISDIR(st.st_mode) && chdir(argv[1])) {
             perror("ccc");
             die("Error from chdir");
-        }
-        if (S_ISREG(st.st_mode)) {
-//            char *rm_f_name = strrchr(argv[1], '/');
+        } else if (S_ISREG(st.st_mode)) {
+            argv_cp = estrdup(argv[1]);
+            char *last_slash = strrchr(argv_cp, '/');
+            *last_slash = '\0';
+            if (chdir(argv[1])) {
+                perror("ccc");
+                die("Error from chdir");
+            }
             to_open_file = true;
         }
     }
@@ -125,7 +131,7 @@ int main(int argc, char** argv)
     
     populate_files(cwd, 0);
     if (to_open_file) {
-        current_selection = arraylist_search(files, argv[1], true);
+        current_selection = arraylist_search(files, argv_cp, true);
         highlight_current_line();
     }
 
@@ -439,10 +445,7 @@ void change_dir(const char *buf, int selection, int ftype)
 {
     char *buf_dup;
     if (buf == p_cwd) {
-        buf_dup = strdup(p_cwd);
-        if (buf_dup == NULL) {
-            return;
-        }
+        buf_dup = estrdup(p_cwd);
     } else {
         buf_dup = (char *) buf;
     }
@@ -656,6 +659,9 @@ void add_file_stat(char *filename, char *path, int ftype)
     }
     /* get file mode string */
     char *mode_str = get_file_mode(file_stat.st_mode);
+    if (mode_str[0] == '-' && (mode_str[3] == 'x' || mode_str[6] == 'x' || mode_str[9] == 'x')) {
+        
+    }
 
     /* mode_str(11) + time(17) + size_size + 2 spaces + 1 null */
     size_t stat_size = 11 * sizeof(char) + time_size + size_size + 3 * sizeof(char);

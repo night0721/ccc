@@ -83,31 +83,16 @@ void arraylist_add(ArrayList *list, char *name, char *path, char *stats, char *t
     char *stats_cp = NULL;
     wchar_t *icon_cp = NULL;
 
-    if (name != NULL) {
-        name_cp = strdup(name);
-        if (name_cp == NULL)
-            perror("can't add name to arraylist");
-    }
-    if (path != NULL) {
-        path_cp = strdup(path);
-        if (path_cp == NULL)
-            perror("can't add path to arraylist");
-    }
-    if (type != NULL) {
-        type_cp = strdup(type);
-        if (type_cp == NULL)
-            perror("can't add type to arraylist");
-    }
-    if (stats != NULL) {
-        stats_cp = strdup(stats);
-        if (stats_cp == NULL)
-            perror("can't add stats to arraylist");
-    }
-    if (icon != NULL) {
-        icon_cp = wcsdup(icon);
-        if (icon_cp == NULL)
-            perror("can't add icon to arraylist");
-    }
+    if (name != NULL)
+        name_cp = estrdup(name);
+    if (path != NULL)
+        path_cp = estrdup(path);
+    if (type != NULL)
+        type_cp = estrdup(type);
+    if (stats != NULL)
+        stats_cp = estrdup(stats);
+    if (icon != NULL)
+        icon_cp = ewcsdup(icon);
 
     /* name, path, stats, type, icon, color */
     file new_file = { name_cp, path_cp, type_cp, stats_cp, icon_cp, color };
@@ -145,18 +130,14 @@ void arraylist_add(ArrayList *list, char *name, char *path, char *stats, char *t
 char *get_line(ArrayList *list, long index, bool detail)
 {
     file file = list->items[index];
-    char *name = strdup(file.name);
-    wchar_t *icon = wcsdup(file.icon);
-    if (name == NULL || icon == NULL)
-        perror("ccc");
+    char *name = estrdup(file.name);
+    wchar_t *icon = ewcsdup(file.icon);
 
     size_t name_len = strlen(name);
     char *stats = NULL;
     size_t length;
     if (detail) {
-        stats = strdup(file.stats);
-        if (stats == NULL)
-            perror("ccc");
+        stats = estrdup(file.stats);
         length = name_len + strlen(stats) + 7;   /* 4 for icon, 2 for space and 1 for null */
     } else {
         length = name_len + 6;   /* 4 for icon, 1 for space and 1 for null */
