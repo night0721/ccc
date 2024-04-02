@@ -23,6 +23,6 @@ void arraylist_free(ArrayList *list);
 long arraylist_search(ArrayList *list, char *filepath, bool bname);
 void arraylist_remove(ArrayList *list, long index);
 void arraylist_add(ArrayList *list, char *filename, char *path, char *stats, char *type, wchar_t *icon, int color, bool marked, bool force);
-char *get_line(ArrayList *list, long index, bool detail);
+char *get_line(ArrayList *list, long index, bool detail, bool icons);
 
 #endif

@@ -127,7 +127,7 @@ void arraylist_add(ArrayList *list, char *name, char *path, char *stats, char *t
 /*
  * Construct a formatted line for display
  */
-char *get_line(ArrayList *list, long index, bool detail)
+char *get_line(ArrayList *list, long index, bool detail, bool icons)
 {
     file file = list->items[index];
     char *name = estrdup(file.name);
@@ -144,11 +144,19 @@ char *get_line(ArrayList *list, long index, bool detail)
     }
 
     char *line = memalloc(length * sizeof(char));
+    line[0] = '\0';
     if (detail) {
-        snprintf(line, length, "%s %ls %s", stats, icon, name);
-    } else {
-        snprintf(line, length, "%ls %s", icon, name);
+        strcat(line, stats);
+        strcat(line, " ");
     }
-
+    if (icons) {
+        char *tmp = memalloc(8 * sizeof(char));
+        snprintf(tmp, 8, "%ls", icon);
+        strcat(line, tmp);
+        strcat(line, " ");
+        free(tmp);
+    }
+    strcat(line, name);
+ 
     return line;
 }

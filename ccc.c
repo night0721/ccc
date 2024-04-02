@@ -44,6 +44,7 @@ bool to_open_file = false;
 bool dirs_size = DIRS_SIZE;
 bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
+bool show_icons = SHOW_ICONS;
 char *argv_cp;
 char *trash_dir;
 char *cwd;
@@ -291,6 +292,11 @@ int main(int argc, char** argv)
                 change_dir(cwd, 0, 0);
                 break;
 
+            case 'w':
+                show_icons = !show_icons;
+                change_dir(cwd, 0, 0);
+                break;
+
             case 'X':
                 toggle_executable();
                 break;
@@ -376,6 +382,7 @@ int main(int argc, char** argv)
                 break;
         }
     }
+    free(argv_cp);
     arraylist_free(files);
     arraylist_free(marked);
     endwin();
@@ -752,7 +759,7 @@ void highlight_current_line()
             }
         }
         /* print the actual filename and stats */
-        char *line = get_line(files, i, file_details);
+        char *line = get_line(files, i, file_details, show_icons);
         int color = files->items[i].color;
         /* check is file marked for action */
         bool is_marked = arraylist_search(marked, files->items[i].path, false) != -1;
