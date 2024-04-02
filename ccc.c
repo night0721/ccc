@@ -33,6 +33,8 @@ void show_file_content();
 void edit_file();
 void toggle_executable();
 int write_last_d();
+void create_file();
+void delete_files();
 void wpprintw(const char *fmt, ...);
 void init_windows();
 void draw_border_title(WINDOW *window, bool active);
@@ -46,10 +48,8 @@ bool show_hidden = SHOW_HIDDEN;
 bool file_details = SHOW_DETAILS;
 bool show_icons = SHOW_ICONS;
 char *argv_cp;
-char *trash_dir;
 char *cwd;
 char *p_cwd; /* previous cwd */
-char *trash_dir;
 int half_width;
 ArrayList *files;
 ArrayList *marked;
@@ -297,6 +297,10 @@ int main(int argc, char** argv)
                 change_dir(cwd, 0, 0);
                 break;
 
+            case 'f':
+                create_file();
+                break;
+                
             case 'X':
                 toggle_executable();
                 break;
@@ -315,25 +319,7 @@ int main(int argc, char** argv)
             /* mark actions: */
             /* delete */
             case 'd':
-                if (marked->length) {
-                    char *trash_dir = check_trash_dir();
-                    if (trash_dir != NULL) {
- //                       int i = 0;
-                        /*
-                        while (i < marked->length) {
-                            printf("deleted %s ", marked->items->path);
-                            if (rename(marked->items->path, trash_dir) == 0) {
-                                printf("file deleted");
-                            } else {
-                                perror("error moving file");
-                            }
-                            i++;
-                        }
-                        */
-                    } else {
-                        wpprintw("implement hard delete");
-                    }
-                }
+                delete_files();
                 break;
 
             /* move */
@@ -412,6 +398,7 @@ char *check_trash_dir()
 {
     char *path = memalloc(PATH_MAX * sizeof(char));
 
+    char *trash_dir;
     #ifdef TRASH_DIR
         trash_dir = TRASH_DIR;
     #endif
@@ -925,6 +912,42 @@ int write_last_d()
         fclose(last_d_file);
     }
     return 0;
+}
+
+void create_file()
+{
+    echo();
+    wpprintw("New file: ");
+    char input[PATH_MAX];
+    /* get string at y=0, x=10 */
+    mvwgetstr(panel, 0, 10, input);
+    FILE *f = fopen(input, "w+");
+    fclose(f);
+    wpprintw("Created %s", input);
+    change_dir(cwd, 0, 0);
+    noecho();
+}
+
+void delete_files()
+{
+    if (marked->length) {
+        char *trash_dir = check_trash_dir();
+        if (trash_dir != NULL) {
+            for (int i = 0; i < marked->length; i++) {
+                char *new_path = memalloc(PATH_MAX * sizeof(char));
+                strcpy(new_path, trash_dir);
+                strcat(new_path, "/");
+                strcat(new_path, marked->items[i].name);
+                if (rename(marked->items[i].path, new_path)) {
+                    wpprintw("delete failed: %s\n", strerror(errno));
+                } else {
+                    change_dir(cwd, 0, 0);
+                }
+            }
+        } else {
+            wpprintw("TODO: implement hard delete");
+        }
+    }
 }
 
 /*
