@@ -13,6 +13,7 @@ Consider this project incomplete and WIP!
 | Standard movement              |   X    |         |
 | Advanced movement (jumps)      |   X    |         |
 | File details                   |   X    |         |
+| File icons!                    |   X    |         |
 | Searching for files            |        |         |
 | Sorting                        |        |         |
 | Marking and marking operations |        |         |
@@ -32,9 +33,10 @@ Consider this project incomplete and WIP!
 ### Dependencies
 
 - gcc
-- ncurses
+- ncursesw
 - make
 - pkg-config
+- Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
 
 ### Building
 
