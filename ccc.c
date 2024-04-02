@@ -457,8 +457,10 @@ void change_dir(const char *buf, int selection, int ftype)
         buf_dup = (char *) buf;
     }
     strcpy(cwd, buf_dup);
-    arraylist_free(files);
-    files = arraylist_init(100);
+    if (ftype != 2) {
+        arraylist_free(files);
+        files = arraylist_init(100);
+    }
     current_selection = selection;
     populate_files(cwd, ftype);
 }
