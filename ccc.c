@@ -63,9 +63,10 @@ unsigned long total_dir_size;
 
 int main(int argc, char** argv)
 {
-    if (argc > 1 && strcmp(argv[1], "-h") == 0)
-        die("Usage: ccc filename");
     if (argc == 2) {
+        if (strcmp(argv[1], "-h") == 0)
+            die("Usage: ccc filename");
+
         struct stat st;
         if (lstat(argv[1], &st)) {
             perror("ccc");
