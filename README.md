@@ -19,7 +19,7 @@ Consider this project incomplete and WIP!
 | Marking and marking operations |        |         |
 | Other operations on files      |        |         |
 | Image previews                 |        |         |
-| Help                           |        |         |
+| Help                           |   X    |         |
 | History                        |        |         |
 | Bookmarks                      |        |         |
 | Bulk rename                    |        |         |
@@ -55,9 +55,9 @@ j: scroll down
 k: scroll up
 l: go to child dir
 
-left:  go to parent dir
-down:  scroll down
-up:    scroll up
+left: go to parent dir
+down: scroll down
+up: scroll up
 right: go to child dir
 
 enter: go to child dir/open file
@@ -78,8 +78,12 @@ i: toggle file details
 X: toggle executable
 
 A: show directory disk usage/block size
+
+f: new file
+
 space: mark file
 a: mark all files in directory
+d: trash
 
 ?: show help
 q: exit with last dir written to file
