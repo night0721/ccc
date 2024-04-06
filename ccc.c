@@ -32,6 +32,7 @@ void highlight_current_line();
 void show_file_content();
 void edit_file();
 void toggle_executable();
+void replace_home(char *str);
 int write_last_d();
 void create_file();
 void delete_files();
@@ -42,6 +43,7 @@ void draw_border_title(WINDOW *window, bool active);
 /* global variables */
 unsigned int focus = 0;
 long current_selection = 0;
+bool file_picker = false;
 bool to_open_file = false;
 bool dirs_size = DIRS_SIZE;
 bool show_hidden = SHOW_HIDDEN;
@@ -63,8 +65,12 @@ unsigned long total_dir_size;
 
 int main(int argc, char** argv)
 {
-    if (argc == 2) {
-        if (strcmp(argv[1], "-h") == 0)
+    if (argc == 3) {
+        if (strncmp(argv[2], "-p", 2) == 0)
+            file_picker = true;
+    }
+    if (argc <= 3 && argc != 1) {
+        if (strncmp(argv[1], "-h", 2) == 0)
             die("Usage: ccc filename");
 
         struct stat st;
@@ -182,12 +188,24 @@ int main(int argc, char** argv)
             case 'l':
                 strcpy(p_cwd, cwd);
                 file c_file = files->items[current_selection];
+ 
                 /* check if it is directory or a regular file */
                 if (strncmp(c_file.type, "DIR", 3) == 0) {
                     /* change cwd to directory */
                     change_dir(c_file.path, 0, 0); 
                 } else if (strncmp(c_file.type, "REG", 3) == 0) {
-                    edit_file();
+                    /* write opened file to a file for file pickers */
+                    if (file_picker) {
+                        char *opened_file_path = memalloc(PATH_MAX * sizeof(char));strcpy(opened_file_path, "~/.cache/ccc/opened_file");
+                        replace_home(opened_file_path);
+                        FILE *opened_file = fopen(opened_file_path, "w+");
+                        fprintf(opened_file, "%s\n", c_file.path);
+                        fclose(opened_file);
+                        endwin();
+                        return 0;
+                    } else {
+                        edit_file();
+                    }
                 }
                 break;
 
@@ -380,7 +398,7 @@ void show_help()
 {
     wclear(directory_content);
     wclear(preview_content);
-    wprintw(directory_content,"h: go to parent dir\nj: scroll down\nk: scroll up\nl: go to child dir\n\nleft:  go to parent dir\ndown:  scroll down\nup:    scroll up\nright: go to child dir\n\nenter: go to child dir/open file\nbackspace: go to parent dir\n\ngg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\nt: go to trash dir\n~: go to home dir\n-: go to previous dir\nz: refresh current dir\n\ni: toggle file details\nX: toggle executable\n\nA: show directory disk usage/block size\nspace: mark file\na: mark all files in directory\n\n?: show help\nq: exit with last dir written to file\nctrl+c exit without writing last dir");
+    wprintw(directory_content,"h: go to parent dir\nj: scroll down\nk: scroll up\nl: go to child dir\n\nleft:  go to parent dir\ndown:  scroll down\nup:    scroll up\nright: go to child dir\n\nenter: go to child dir/open file\nbackspace: go to parent dir\n\ngg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\nt: go to trash dir\n~: go to home dir\n-: go to previous dir\nz: refresh current dir\n\ni: toggle file details\nX: toggle executable\n\nA: show directory disk usage/block size\n\nf: new file\n\nspace: mark file\na: mark all files in directory\nd: trash\n\n?: show help\nq: exit with last dir written to file\nctrl+c exit without writing last dir");
     wpprintw("Visit https://github.com/piotr-marendowski/ccc or use 'man ccc' for help");
     wrefresh(directory_content);
     wrefresh(preview_content);
@@ -402,6 +420,7 @@ char *check_trash_dir()
     char *trash_dir;
     #ifdef TRASH_DIR
         trash_dir = TRASH_DIR;
+        strcpy(path, trash_dir);
     #endif
 
     /* check if there is trash_dir */
@@ -412,16 +431,7 @@ char *check_trash_dir()
         /* if trash_dir has ~ then make it $HOME */
         /* use path as trash_dir */
         if (trash_dir[0] == '~') {
-            char *home = getenv("HOME");
-            if (home == NULL) {
-                wpprintw("$HOME is not defined, can't read the trash directory");
-                return NULL;
-            }
-            /* replace ~ with home */
-            snprintf(path, PATH_MAX, "%s%s", home, trash_dir + 1);
-        }
-        else {
-            strcpy(path, trash_dir);
+            replace_home(path);
         }
 
         /* if has access to trash_dir */
@@ -878,6 +888,19 @@ void toggle_executable()
 
 }
 
+void replace_home(char *str)
+{
+    char *home = getenv("HOME");
+    if (home == NULL) {
+        wpprintw("$HOME is not defined");
+        return;
+    }
+    char *after_tilde = estrdup(str + 1);
+    /* replace ~ with home */
+    snprintf(str, PATH_MAX, "%s%s", home, after_tilde);
+    free(after_tilde);
+}
+
 int write_last_d()
 {
     #ifdef LAST_D
@@ -890,27 +913,25 @@ int write_last_d()
         wpprintw("Cannot get CCC_LAST_D variable, is it defined?");
         return -1;
     } else {
-        char *last_ddup = memalloc(PATH_MAX * sizeof(char));
-        char *home = getenv("HOME");
-        if (home == NULL) {
-            wpprintw("$HOME is not defined");
-            return -1;
+        if (last_d[0] == '~') {
+            replace_home(last_d);
         }
-        /* replace ~ with home */
-        snprintf(last_ddup, PATH_MAX, "%s%s", home, last_d + 1);
-
-        char *last_d_dir = strrchr(last_d, '/');
+        char *last_ddup = estrdup(last_d);
+ 
+        char *last_d_dir = strrchr(last_ddup, '/');
         if (last_d_dir != NULL) {
             *last_d_dir = '\0'; /* truncate string */
         }
-        mkdir_p(last_d);
-        FILE *last_d_file = fopen(last_ddup, "w");
+        mkdir_p(last_ddup);
+        FILE *last_d_file = fopen(last_d, "w");
         if (last_d_file == NULL) {
             wpprintw("Cannot open last directory file");
             return -1;
         }
         fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
         fclose(last_d_file);
+        free(last_ddup);
+        free(last_d);
     }
     return 0;
 }
