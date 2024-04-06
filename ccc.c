@@ -32,7 +32,7 @@ void highlight_current_line();
 void show_file_content();
 void edit_file();
 void toggle_executable();
-void replace_home(char *str);
+char *replace_home(char *str);
 int write_last_d();
 void create_file();
 void delete_files();
@@ -55,6 +55,8 @@ char *p_cwd; /* previous cwd */
 int half_width;
 ArrayList *files;
 ArrayList *marked;
+ArrayList *tmp1;
+ArrayList *tmp2;
 WINDOW *directory_border;
 WINDOW *directory_content;
 WINDOW *preview_border;
@@ -128,7 +130,6 @@ int main(int argc, char** argv)
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     /* init files and marked arrays */
-    files = arraylist_init(100);
     marked = arraylist_init(100);
     hashtable_init();
 
@@ -157,8 +158,7 @@ int main(int argc, char** argv)
                     /* prompt user so error message can be shown to user */
                     getch();
                 }
-                endwin();
-                return 0;
+                goto cleanup;
 
             /* reload using z */
             case 'z':
@@ -387,6 +387,7 @@ int main(int argc, char** argv)
                 break;
         }
     }
+cleanup:
     free(argv_cp);
     arraylist_free(files);
     arraylist_free(marked);
@@ -448,17 +449,10 @@ char *check_trash_dir()
  */
 void change_dir(const char *buf, int selection, int ftype)
 {
-    char *buf_dup;
-    if (buf == p_cwd) {
-        buf_dup = estrdup(p_cwd);
-    } else {
-        buf_dup = (char *) buf;
-    }
-    strcpy(cwd, buf_dup);
-    if (ftype != 2) {
+    if (cwd != buf)
+        strcpy(cwd, buf);
+    if (ftype == 0)
         arraylist_free(files);
-        files = arraylist_init(100);
-    }
     current_selection = selection;
     populate_files(cwd, ftype);
 }
@@ -513,7 +507,7 @@ void mkdir_p(const char *destdir)
 }
 
 /*
- * Read the provided directory and add all files in directory to linked list
+ * Read the provided directory and add all files in directory to an Arraylist
  * ftype: normal files = 0, marked = 1, marking ALL = 2
  */
 void populate_files(const char *path, int ftype)
@@ -524,24 +518,35 @@ void populate_files(const char *path, int ftype)
     if ((dp = opendir(path)) != NULL) {
         /* clear directory window to ready for printing */
         wclear(directory_content);
+        if (ftype == 0) {
+            tmp1 = arraylist_init(10);
+            tmp2 = arraylist_init(10);
+        }
 
         while ((ep = readdir(dp)) != NULL) {
-            char *path = memalloc(PATH_MAX * sizeof(char));
-            char *filename = memalloc(PATH_MAX * sizeof(char));
-            /* copy filename */
-            strcpy(filename, ep->d_name);
+            char *filename = estrdup(ep->d_name);
 
             /* use strncmp to filter out dotfiles */
             if ((!show_hidden && strncmp(filename, ".", 1) && strncmp(filename, "..", 2)) || (show_hidden && strcmp(filename, ".") && strcmp(filename, ".."))) {
                 /* construct full file path */
+                char *path = memalloc((strlen(cwd) + strlen(filename) + 2) * sizeof(char));
                 strcpy(path, cwd);
                 strcat(path, "/");
                 strcat(path, filename);   /* add filename */
 
                 add_file_stat(filename, path, ftype);
             }
-            free(filename);
-            free(path);
+            else free(filename);
+        }
+        if (ftype == 0) {
+            files = arraylist_init(tmp1->length + tmp2->length);
+            files->length = tmp1->length + tmp2->length;
+            memcpy(files->items, tmp1->items, tmp1->length * sizeof(file));
+            memcpy(files->items + tmp1->length, tmp2->items, tmp2->length * sizeof(file));
+            free(tmp1->items);
+            free(tmp2->items);
+            free(tmp1);
+            free(tmp2);
         }
         closedir(dp);
         wrefresh(directory_content);
@@ -627,7 +632,6 @@ void add_file_stat(char *filename, char *path, int ftype)
         bool force = ftype == 2 ? true : false;
         arraylist_add(marked, filename, path, NULL, type, icon_str, 8, true, force);
         /* free type and return without allocating more stuff */
-        free(type);
         return;
     }
 
@@ -675,14 +679,15 @@ void add_file_stat(char *filename, char *path, int ftype)
     char *total_stat = memalloc(stat_size);
     snprintf(total_stat, stat_size, "%s %s %-*s", mode_str, time, size_size, size);
 
-    arraylist_add(files, filename, path, total_stat, type, icon_str, color, false, false);
+    /* DIR if color is 5 */
+    if (color == 5)
+        arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, false, false);
+    else
+        arraylist_add(tmp2, filename, path, total_stat, type, icon_str, color, false, false);
 
     free(time);
     free(size);
-    free(total_stat);
-    free(type);
     free(mode_str);
-    free(icon_str);
 }
 
 /*
@@ -887,24 +892,24 @@ void toggle_executable()
 
 }
 
-void replace_home(char *str)
+char *replace_home(char *str)
 {
     char *home = getenv("HOME");
     if (home == NULL) {
         wpprintw("$HOME is not defined");
-        return;
+        return str;
     }
-    char *after_tilde = estrdup(str + 1);
+    char *newstr = memalloc((strlen(str) + strlen(home)) * sizeof(char));
     /* replace ~ with home */
-    snprintf(str, PATH_MAX, "%s%s", home, after_tilde);
-    free(after_tilde);
+    snprintf(newstr, strlen(str) + strlen(home), "%s%s", home, str + 1);
+    free(str);
+    return newstr;
 }
 
 int write_last_d()
 {
     #ifdef LAST_D
-        char *last_d = memalloc(PATH_MAX * sizeof(char)); 
-        strcpy(last_d, LAST_D);
+        char *last_d = estrdup(LAST_D);
     #else
         char *last_d = getenv("CCC_LAST_D");
     #endif
@@ -913,7 +918,7 @@ int write_last_d()
         return -1;
     } else {
         if (last_d[0] == '~') {
-            replace_home(last_d);
+            last_d = replace_home(last_d);
         }
         char *last_ddup = estrdup(last_d);
  
