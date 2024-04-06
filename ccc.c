@@ -684,6 +684,7 @@ void add_file_stat(char *filename, char *path, int ftype)
     char *total_stat = memalloc(stat_size);
     snprintf(total_stat, stat_size, "%s %s %-*s", mode_str, time, size_size, size);
 
+    /* DIR if color is 5 */
     if (color == 5)
         arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, false, false);
     else
