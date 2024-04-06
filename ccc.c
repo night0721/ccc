@@ -55,6 +55,8 @@ char *p_cwd; /* previous cwd */
 int half_width;
 ArrayList *files;
 ArrayList *marked;
+ArrayList *tmp1;
+ArrayList *tmp2;
 WINDOW *directory_border;
 WINDOW *directory_content;
 WINDOW *preview_border;
@@ -128,7 +130,6 @@ int main(int argc, char** argv)
     init_pair(8, COLOR_WHITE, -1);      /* REG */
 
     /* init files and marked arrays */
-    files = arraylist_init(100);
     marked = arraylist_init(100);
     hashtable_init();
 
@@ -457,7 +458,6 @@ void change_dir(const char *buf, int selection, int ftype)
     strcpy(cwd, buf_dup);
     if (ftype != 2) {
         arraylist_free(files);
-        files = arraylist_init(100);
     }
     current_selection = selection;
     populate_files(cwd, ftype);
@@ -524,6 +524,10 @@ void populate_files(const char *path, int ftype)
     if ((dp = opendir(path)) != NULL) {
         /* clear directory window to ready for printing */
         wclear(directory_content);
+        if (ftype == 0) {
+            tmp1 = arraylist_init(10);
+            tmp2 = arraylist_init(10);
+        }
 
         while ((ep = readdir(dp)) != NULL) {
             char *path = memalloc(PATH_MAX * sizeof(char));
@@ -542,6 +546,14 @@ void populate_files(const char *path, int ftype)
             }
             free(filename);
             free(path);
+        }
+        if (ftype == 0) {
+            files = arraylist_init(tmp1->length + tmp2->length);
+            files->length = tmp1->length + tmp2->length;
+            memcpy(files->items, tmp1->items, tmp1->length * sizeof(file));
+            memcpy(files->items + tmp1->length, tmp2->items, tmp2->length * sizeof(file));
+            free(tmp1->items);
+            free(tmp2->items);
         }
         closedir(dp);
         wrefresh(directory_content);
@@ -675,14 +687,14 @@ void add_file_stat(char *filename, char *path, int ftype)
     char *total_stat = memalloc(stat_size);
     snprintf(total_stat, stat_size, "%s %s %-*s", mode_str, time, size_size, size);
 
-    arraylist_add(files, filename, path, total_stat, type, icon_str, color, false, false);
+    if (color == 5)
+        arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, false, false);
+    else
+        arraylist_add(tmp2, filename, path, total_stat, type, icon_str, color, false, false);
 
     free(time);
     free(size);
-    free(total_stat);
-    free(type);
     free(mode_str);
-    free(icon_str);
 }
 
 /*
