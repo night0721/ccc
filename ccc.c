@@ -544,8 +544,6 @@ void populate_files(const char *path, int ftype)
 
                 add_file_stat(filename, path, ftype);
             }
-            free(filename);
-            free(path);
         }
         if (ftype == 0) {
             files = arraylist_init(tmp1->length + tmp2->length);

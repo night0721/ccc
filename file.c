@@ -77,25 +77,8 @@ void arraylist_remove(ArrayList *list, long index)
  */
 void arraylist_add(ArrayList *list, char *name, char *path, char *stats, char *type, wchar_t *icon, int color, bool marked, bool force)
 {
-    char *name_cp = NULL;
-    char *path_cp = NULL;
-    char *type_cp = NULL;
-    char *stats_cp = NULL;
-    wchar_t *icon_cp = NULL;
-
-    if (name != NULL)
-        name_cp = estrdup(name);
-    if (path != NULL)
-        path_cp = estrdup(path);
-    if (type != NULL)
-        type_cp = estrdup(type);
-    if (stats != NULL)
-        stats_cp = estrdup(stats);
-    if (icon != NULL)
-        icon_cp = ewcsdup(icon);
-
     /* name, path, stats, type, icon, color */
-    file new_file = { name_cp, path_cp, type_cp, stats_cp, icon_cp, color };
+    file new_file = { name, path, type, stats, icon, color };
 
     if (list->capacity != list->length) {
         if (marked) {
