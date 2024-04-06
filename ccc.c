@@ -858,7 +858,6 @@ void edit_file()
         system(command);
         reset_prog_mode();  /* return to previous tty mode */
         refresh();          /* store the screen contents */
-        free(filename);
     }
 }
 
