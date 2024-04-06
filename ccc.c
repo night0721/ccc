@@ -513,7 +513,7 @@ void mkdir_p(const char *destdir)
 }
 
 /*
- * Read the provided directory and add all files in directory to linked list
+ * Read the provided directory and add all files in directory to an Arraylist
  * ftype: normal files = 0, marked = 1, marking ALL = 2
  */
 void populate_files(const char *path, int ftype)
