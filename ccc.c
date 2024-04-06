@@ -637,7 +637,6 @@ void add_file_stat(char *filename, char *path, int ftype)
         bool force = ftype == 2 ? true : false;
         arraylist_add(marked, filename, path, NULL, type, icon_str, 8, true, force);
         /* free type and return without allocating more stuff */
-        free(type);
         return;
     }
 
