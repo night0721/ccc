@@ -158,8 +158,7 @@ int main(int argc, char** argv)
                     /* prompt user so error message can be shown to user */
                     getch();
                 }
-                endwin();
-                return 0;
+                goto cleanup;
 
             /* reload using z */
             case 'z':
@@ -388,6 +387,7 @@ int main(int argc, char** argv)
                 break;
         }
     }
+cleanup:
     free(argv_cp);
     arraylist_free(files);
     arraylist_free(marked);
@@ -449,16 +449,10 @@ char *check_trash_dir()
  */
 void change_dir(const char *buf, int selection, int ftype)
 {
-    char *buf_dup;
-    if (buf == p_cwd) {
-        buf_dup = estrdup(p_cwd);
-    } else {
-        buf_dup = (char *) buf;
-    }
-    strcpy(cwd, buf_dup);
-    if (ftype != 2) {
+    if (cwd != buf)
+        strcpy(cwd, buf);
+    if (ftype == 0)
         arraylist_free(files);
-    }
     current_selection = selection;
     populate_files(cwd, ftype);
 }
@@ -530,20 +524,19 @@ void populate_files(const char *path, int ftype)
         }
 
         while ((ep = readdir(dp)) != NULL) {
-            char *path = memalloc(PATH_MAX * sizeof(char));
-            char *filename = memalloc(PATH_MAX * sizeof(char));
-            /* copy filename */
-            strcpy(filename, ep->d_name);
+            char *filename = estrdup(ep->d_name);
 
             /* use strncmp to filter out dotfiles */
             if ((!show_hidden && strncmp(filename, ".", 1) && strncmp(filename, "..", 2)) || (show_hidden && strcmp(filename, ".") && strcmp(filename, ".."))) {
                 /* construct full file path */
+                char *path = memalloc((strlen(cwd) + strlen(filename) + 2) * sizeof(char));
                 strcpy(path, cwd);
                 strcat(path, "/");
                 strcat(path, filename);   /* add filename */
 
                 add_file_stat(filename, path, ftype);
             }
+            else free(filename);
         }
         if (ftype == 0) {
             files = arraylist_init(tmp1->length + tmp2->length);
@@ -552,6 +545,8 @@ void populate_files(const char *path, int ftype)
             memcpy(files->items + tmp1->length, tmp2->items, tmp2->length * sizeof(file));
             free(tmp1->items);
             free(tmp2->items);
+            free(tmp1);
+            free(tmp2);
         }
         closedir(dp);
         wrefresh(directory_content);

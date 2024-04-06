@@ -33,7 +33,7 @@ void arraylist_free(ArrayList *list)
     }
 
     free(list->items);
-    list->length = 0;
+    free(list);
 }
 
 /*
@@ -113,15 +113,11 @@ void arraylist_add(ArrayList *list, char *name, char *path, char *stats, char *t
 char *get_line(ArrayList *list, long index, bool detail, bool icons)
 {
     file file = list->items[index];
-    char *name = estrdup(file.name);
-    wchar_t *icon = ewcsdup(file.icon);
 
-    size_t name_len = strlen(name);
-    char *stats = NULL;
+    size_t name_len = strlen(file.name);
     size_t length;
     if (detail) {
-        stats = estrdup(file.stats);
-        length = name_len + strlen(stats) + 7;   /* 4 for icon, 2 for space and 1 for null */
+        length = name_len + strlen(file.stats) + 7;   /* 4 for icon, 2 for space and 1 for null */
     } else {
         length = name_len + 6;   /* 4 for icon, 1 for space and 1 for null */
     }
@@ -129,17 +125,17 @@ char *get_line(ArrayList *list, long index, bool detail, bool icons)
     char *line = memalloc(length * sizeof(char));
     line[0] = '\0';
     if (detail) {
-        strcat(line, stats);
+        strcat(line, file.stats);
         strcat(line, " ");
     }
     if (icons) {
         char *tmp = memalloc(8 * sizeof(char));
-        snprintf(tmp, 8, "%ls", icon);
+        snprintf(tmp, 8, "%ls", file.icon);
         strcat(line, tmp);
         strcat(line, " ");
         free(tmp);
     }
-    strcat(line, name);
+    strcat(line, file.name);
  
     return line;
 }
