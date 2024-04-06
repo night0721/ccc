@@ -32,7 +32,7 @@ void highlight_current_line();
 void show_file_content();
 void edit_file();
 void toggle_executable();
-void replace_home(char *str);
+char *replace_home(char *str);
 int write_last_d();
 void create_file();
 void delete_files();
@@ -892,24 +892,24 @@ void toggle_executable()
 
 }
 
-void replace_home(char *str)
+char *replace_home(char *str)
 {
     char *home = getenv("HOME");
     if (home == NULL) {
         wpprintw("$HOME is not defined");
-        return;
+        return str;
     }
-    char *after_tilde = estrdup(str + 1);
+    char *newstr = memalloc((strlen(str) + strlen(home)) * sizeof(char));
     /* replace ~ with home */
-    snprintf(str, PATH_MAX, "%s%s", home, after_tilde);
-    free(after_tilde);
+    snprintf(newstr, strlen(str) + strlen(home), "%s%s", home, str + 1);
+    free(str);
+    return newstr;
 }
 
 int write_last_d()
 {
     #ifdef LAST_D
-        char *last_d = memalloc(PATH_MAX * sizeof(char)); 
-        strcpy(last_d, LAST_D);
+        char *last_d = estrdup(LAST_D);
     #else
         char *last_d = getenv("CCC_LAST_D");
     #endif
@@ -918,7 +918,7 @@ int write_last_d()
         return -1;
     } else {
         if (last_d[0] == '~') {
-            replace_home(last_d);
+            last_d = replace_home(last_d);
         }
         char *last_ddup = estrdup(last_d);
  
