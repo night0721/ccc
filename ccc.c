@@ -903,9 +903,6 @@ char *replace_home(char *str)
     char *newstr = memalloc((strlen(str) + strlen(home)) * sizeof(char));
     /* replace ~ with home */
     snprintf(newstr, strlen(str) + strlen(home), "%s%s", home, str + 1);
-    FILE *a = fopen("/home/night/a", "a+");
-    fprintf(a, "%s\n", newstr);
-    fclose(a);
     free(str);
     return newstr;
 }
