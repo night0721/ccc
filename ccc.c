@@ -34,6 +34,7 @@ void edit_file();
 void toggle_executable();
 char *replace_home(char *str);
 int write_last_d();
+void sort_files();
 void create_file();
 void delete_files();
 void wpprintw(const char *fmt, ...);
@@ -280,8 +281,15 @@ int main(int argc, char** argv)
             /* go to the trash dir */
             case 't':;
                 char *trash_dir = check_trash_dir();
-                if (trash_dir != NULL)
+                if (trash_dir != NULL) {
+                    strcpy(p_cwd, cwd);
                     change_dir(trash_dir, 0, 0);
+                }
+                break;
+
+            /* sort files */
+            case 'u':
+                sort_files();
                 break;
 
             /* show directories' sizes */
@@ -939,6 +947,16 @@ int write_last_d()
         free(last_d);
     }
     return 0;
+}
+
+int sort_compare(const void *a, const void *b) {
+    return strcmp(((file *) a)->name, ((file *) b)->name);
+}
+
+void sort_files()
+{
+    qsort(files->items, files->length, sizeof(file), sort_compare);
+    highlight_current_line();
 }
 
 void create_file()
