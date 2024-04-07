@@ -38,14 +38,25 @@ Consider this project incomplete and WIP!
 - pkg-config
 - Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
 
-### Building
+## Building and Installing
 
 You will need to run these with elevated privilages.
 
 ```
 $ git clone https://github.com/piotr-marendowski/ccc
 $ make 
-$ sudo make install
+# make install
+```
+
+### CD on Exit
+#### POSIX Shell
+```sh
+# Add this to your .bashrc, .zshrc or equivalent.
+# Run 'ccc' with 'c' or whatever you decide to name the function.
+c() {
+    ccc "$@"
+    cd "$(cat "${XDG_CACHE_HOME:=${HOME}/.cache}/ccc/.ccc_d")"
+}
 ```
 
 ## Usage
@@ -88,8 +99,38 @@ d: trash
 ?: show help
 q: exit with last dir written to file
 ctrl+c exit without writing last dir
+
+TO BE DONE:
+o: open file with
+O: open file with a GUI program detached from file manager
+
+:: go to a directory by typing.
+
+/: search
+!: open shell in current dir
+
+u: sort files
+x: view file/dir attributes
+e: show history
+y: copy filename to clipboard
+
+n: new dir
+r: rename
+
+c: copy
+m: move
+s: symbolic link
+b: bulk rename
+
+p: execute paste/move/delete/bulk_rename
+
+[1-9]: favourites/bookmarks (see customization)
 ```
 
-## License
+### Using `ccc` in neovim as a file picker
+
+See [ccc.nvim](https://github.com/night0721/ccc.nvim)
+
+### License
 
 This project has GNU GPL v.3 license.
