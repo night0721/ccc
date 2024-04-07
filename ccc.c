@@ -196,8 +196,9 @@ int main(int argc, char** argv)
                 } else if (strncmp(c_file.type, "REG", 3) == 0) {
                     /* write opened file to a file for file pickers */
                     if (file_picker) {
-                        char *opened_file_path = memalloc(PATH_MAX * sizeof(char));strcpy(opened_file_path, "~/.cache/ccc/opened_file");
-                        replace_home(opened_file_path);
+                        char *opened_file_path = memalloc(PATH_MAX * sizeof(char));
+                        strcpy(opened_file_path, "~/.cache/ccc/opened_file");
+                        opened_file_path = replace_home(opened_file_path);
                         FILE *opened_file = fopen(opened_file_path, "w+");
                         fprintf(opened_file, "%s\n", c_file.path);
                         fclose(opened_file);
@@ -432,7 +433,7 @@ char *check_trash_dir()
         /* if trash_dir has ~ then make it $HOME */
         /* use path as trash_dir */
         if (trash_dir[0] == '~') {
-            replace_home(path);
+            path = replace_home(path);
         }
 
         /* if has access to trash_dir */
@@ -902,6 +903,9 @@ char *replace_home(char *str)
     char *newstr = memalloc((strlen(str) + strlen(home)) * sizeof(char));
     /* replace ~ with home */
     snprintf(newstr, strlen(str) + strlen(home), "%s%s", home, str + 1);
+    FILE *a = fopen("/home/night/a", "a+");
+    fprintf(a, "%s\n", newstr);
+    fclose(a);
     free(str);
     return newstr;
 }
