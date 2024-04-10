@@ -66,9 +66,9 @@ j: scroll down
 k: scroll up
 l: go to child dir
 
-left: go to parent dir
-down: scroll down
-up: scroll up
+left:  go to parent dir
+down:  scroll down
+up:    scroll up
 right: go to child dir
 
 enter: go to child dir/open file
@@ -84,13 +84,18 @@ t: go to trash dir
 ~: go to home dir
 -: go to previous dir
 z: refresh current dir
+:: go to a directory by typing
+u: sort files
 
+.: toggle hidden files
 i: toggle file details
 X: toggle executable
 
 A: show directory disk usage/block size
 
 f: new file
+n: new dir
+r: rename
 
 space: mark file
 a: mark all files in directory
@@ -104,18 +109,12 @@ TO BE DONE:
 o: open file with
 O: open file with a GUI program detached from file manager
 
-:: go to a directory by typing.
-
 /: search
 !: open shell in current dir
 
-u: sort files
 x: view file/dir attributes
 e: show history
 y: copy filename to clipboard
-
-n: new dir
-r: rename
 
 c: copy
 m: move

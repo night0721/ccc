@@ -35,6 +35,10 @@ void toggle_executable();
 char *replace_home(char *str);
 int write_last_d();
 void sort_files();
+char *get_panel_string(char *prompt);
+void rename_file();
+void goto_dir();
+void create_dir();
 void create_file();
 void delete_files();
 void wpprintw(const char *fmt, ...);
@@ -272,7 +276,7 @@ int main(int argc, char** argv)
             case TILDE:;
                 char *home = getenv("HOME");
                 if (home == NULL) {
-                    wpprintw("$HOME is not defined");
+                    wpprintw("$HOME not defined");
                 } else {
                     change_dir(home, 0, 0);
                 }
@@ -327,6 +331,18 @@ int main(int argc, char** argv)
 
             case 'f':
                 create_file();
+                break;
+
+            case 'n':
+                create_dir();
+                break;
+
+            case 'r':
+                rename_file();
+                break;
+
+            case ':':
+                goto_dir();
                 break;
                 
             case 'X':
@@ -408,7 +424,7 @@ void show_help()
 {
     wclear(directory_content);
     wclear(preview_content);
-    wprintw(directory_content,"h: go to parent dir\nj: scroll down\nk: scroll up\nl: go to child dir\n\nleft:  go to parent dir\ndown:  scroll down\nup:    scroll up\nright: go to child dir\n\nenter: go to child dir/open file\nbackspace: go to parent dir\n\ngg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\nt: go to trash dir\n~: go to home dir\n-: go to previous dir\nz: refresh current dir\n\ni: toggle file details\nX: toggle executable\n\nA: show directory disk usage/block size\n\nf: new file\n\nspace: mark file\na: mark all files in directory\nd: trash\n\n?: show help\nq: exit with last dir written to file\nctrl+c exit without writing last dir");
+    wprintw(directory_content,"h: go to parent dir\nj: scroll down\nk: scroll up\nl: go to child dir\n\nleft:  go to parent dir\ndown:  scroll down\nup:    scroll up\nright: go to child dir\n\nenter: go to child dir/open file\nbackspace: go to parent dir\n\ngg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\nt: go to trash dir\n~: go to home dir\n-: go to previous dir\nz: refresh current dir\n:: go to a directory by typing\nu: sort files\n\n.: toggle hidden files\ni: toggle file details\nX: toggle executable\n\nA: show directory disk usage/block size\n\nf: new file\nn: new dir\nr: rename\n\nspace: mark file\na: mark all files in directory\nd: trash\n\n?: show help\nq: exit with last dir written to file\nctrl+c exit without writing last dir");
     wpprintw("Visit https://github.com/piotr-marendowski/ccc or use 'man ccc' for help");
     wrefresh(directory_content);
     wrefresh(preview_content);
@@ -435,7 +451,7 @@ char *check_trash_dir()
 
     /* check if there is trash_dir */
     if (trash_dir == NULL) {
-        wpprintw("No trash directory defined");
+        wpprintw("Trash directory not defined");
         return NULL;
     } else {
         /* if trash_dir has ~ then make it $HOME */
@@ -462,6 +478,7 @@ void change_dir(const char *buf, int selection, int ftype)
         strcpy(cwd, buf);
     if (ftype == 0)
         arraylist_free(files);
+    chdir(cwd);
     current_selection = selection;
     populate_files(cwd, ftype);
 }
@@ -478,7 +495,7 @@ void mkdir_p(const char *destdir)
     if (destdir[0] == '~') {
         char *home = getenv("HOME");
         if (home == NULL) {
-            wpprintw("$HOME is not defined");
+            wpprintw("$HOME not defined");
             return;
         }
         /* replace ~ with home */
@@ -868,7 +885,7 @@ void edit_file()
     #endif
 
     if (editor == NULL) {
-        wpprintw("Cannot get EDITOR variable, is it defined?");
+        wpprintw("$EDITOR not defined");
         return;
     } else {
         def_prog_mode();    /* save the tty modes */
@@ -905,7 +922,7 @@ char *replace_home(char *str)
 {
     char *home = getenv("HOME");
     if (home == NULL) {
-        wpprintw("$HOME is not defined");
+        wpprintw("$HOME not defined");
         return str;
     }
     char *newstr = memalloc((strlen(str) + strlen(home)) * sizeof(char));
@@ -923,7 +940,7 @@ int write_last_d()
         char *last_d = getenv("CCC_LAST_D");
     #endif
     if (last_d == NULL) {
-        wpprintw("Cannot get CCC_LAST_D variable, is it defined?");
+        wpprintw("$CCC_LAST_D not defined (Press enter to continue)");
         return -1;
     } else {
         if (last_d[0] == '~') {
@@ -938,7 +955,7 @@ int write_last_d()
         mkdir_p(last_ddup);
         FILE *last_d_file = fopen(last_d, "w");
         if (last_d_file == NULL) {
-            wpprintw("Cannot open last directory file");
+            wpprintw("Cannot open last directory file (Press enter to continue)");
             return -1;
         }
         fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
@@ -959,18 +976,86 @@ void sort_files()
     highlight_current_line();
 }
 
-void create_file()
+char *get_panel_string(char *prompt)
 {
     echo();
-    wpprintw("New file: ");
-    char input[PATH_MAX];
-    /* get string at y=0, x=10 */
-    mvwgetstr(panel, 0, 10, input);
+    wpprintw(prompt);
+    char *input = memalloc(PATH_MAX * sizeof(char));
+    /* get string at y=0, x=length of prompt */
+    mvwgetstr(panel, 0, strlen(prompt), input);
+    noecho();
+    if (input[0] == '~') {
+        input = replace_home(input);
+    }
+    return input;
+}
+
+void rename_file()
+{
+    char *filename = files->items[current_selection].path;
+    char *input = get_panel_string("Rename file: ");
+    char *newfilename = estrdup(filename);
+    /* remove basename of newfilename */
+    char *last_slash = strrchr(newfilename, '/');
+    *last_slash = '\0';
+    /* add the slash back to newfilename */
+    strcat(newfilename, "/");
+    strcat(newfilename, input);
+    if (rename(filename, newfilename)) {
+        wpprintw("rename failed: %s (Press enter to continue)", strerror(errno));
+        getch();
+    } else {
+        change_dir(cwd, 0, 0);
+        wpprintw("Renamed %s to %s", filename, newfilename);
+    }
+    free(input);
+    free(newfilename);
+}
+
+void goto_dir()
+{
+    char *input = get_panel_string("Goto dir: ");
+    struct stat st;
+    if (lstat(input, &st)) {
+        wpprintw("lstat failed: %s (Press enter to continue)", strerror(errno));
+        getch();
+    }
+    /* chdir to directory from argument */
+    if (S_ISDIR(st.st_mode) && chdir(input)) {
+        wpprintw("chdir failed: %s (Press enter to continue)", strerror(errno));
+        getch();
+    }
+    getcwd(cwd, PATH_MAX);
+    change_dir(cwd, 0, 0);
+    free(input);
+}
+
+void create_dir()
+{
+    char *input = get_panel_string("New dir: ");
+    char *newfilename = memalloc(PATH_MAX * sizeof(char));
+    strcpy(newfilename, cwd);
+    strcat(newfilename, "/");
+    strcat(newfilename, input);
+    if (access(newfilename, F_OK) != 0) {
+        mkdir_p(newfilename);
+        change_dir(cwd, 0, 0);
+        wpprintw("Created %s", input);
+    } else {
+        wpprintw("Directory already exist");
+    }
+    free(input);
+    free(newfilename);
+}
+
+void create_file()
+{
+    char *input = get_panel_string("New file: ");
     FILE *f = fopen(input, "w+");
     fclose(f);
-    wpprintw("Created %s", input);
     change_dir(cwd, 0, 0);
-    noecho();
+    wpprintw("Created %s", input);
+    free(input);
 }
 
 void delete_files()
