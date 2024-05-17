@@ -4,7 +4,7 @@
 CC = cc
 VERSION = 1.0
 TARGET = ccc
-MANPAGE = ccc.1
+MANPAGE = $(TARGET).1
 CONF = config.h
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
