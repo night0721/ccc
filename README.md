@@ -32,7 +32,6 @@ Consider this project incomplete and WIP!
 
 ### Dependencies
 
-- gcc
 - ncursesw
 - make
 - pkg-config
