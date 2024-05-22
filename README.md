@@ -1,11 +1,9 @@
 # ccc
-
 `ccc` is a rewrite of [fff](https://github.com/night0721/fff) in C aiming for usefulness and speed.
 
 The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity. You may call it a `soft fork`.
 
-## Features
-
+# Features
 Consider this project incomplete and WIP!
 
 | Feature of fff                 | Ported | Dropped |
@@ -24,41 +22,10 @@ Consider this project incomplete and WIP!
 | Bookmarks                      |        |         |
 | Bulk rename                    |        |         |
 
-#### Features added that are not in [fff](https://github.com/night0721/fff):
-
+## Features added that are not in [fff](https://github.com/night0721/fff):
 - File preview (without highlighting)
 
-## Installation
-
-### Dependencies
-
-- ncursesw
-- make
-- pkg-config
-- Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
-
-## Building and Installing
-
-You will need to run these with elevated privilages.
-
-```
-$ git clone https://github.com/night0721/ccc
-$ make 
-# make install
-```
-
-### CD on Exit
-#### POSIX Shell
-```sh
-# Add this to your .bashrc, .zshrc or equivalent.
-# Run 'ccc' with 'c' or whatever you decide to name the function.
-c() {
-    ccc "$@"
-    cd "$(cat "${XDG_CACHE_HOME:=${HOME}/.cache}/ccc/.ccc_d")"
-}
-```
-
-## Usage
+# Usage
 ```
 h: go to parent dir
 j: scroll down
@@ -125,10 +92,32 @@ p: execute paste/move/delete/bulk_rename
 [1-9]: favourites/bookmarks (see customization)
 ```
 
-### Using `ccc` in neovim as a file picker
+# Dependencies
+- ncurses
+- Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
 
+# Building
+You will need to run these with elevated privilages.
+```
+$ make 
+# make install
+```
+
+# Customizing
+## CD on Exit for POSIX Shell
+```sh
+# Add this to your .bashrc, .zshrc or equivalent.
+# Run 'ccc' with 'c' or whatever you decide to name the function.
+c() {
+    ccc "$@"
+    cd "$(cat "${XDG_CACHE_HOME:=${HOME}/.cache}/ccc/.ccc_d")"
+}
+```
+## Using `ccc` in neovim as a file picker
 See [ccc.nvim](https://github.com/night0721/ccc.nvim)
 
-### License
+# Contributions
+Contributions are welcomed, feel free to open a pull request.
 
-This project has GNU GPL v.3 license.
+# License
+This project is licensed under the GNU Public License v3.0. See [LICENSE](https://github.com/night0721/ccc/blob/master/LICENSE) for more information.
