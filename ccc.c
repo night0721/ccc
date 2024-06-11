@@ -310,6 +310,7 @@ int main(int argc, char** argv)
             /* show help */
             case '?':
                 show_help();
+                change_dir(cwd, 0, 0);
                 break;
             
             /* toggle hidden files */
@@ -471,8 +472,9 @@ void start_ccc()
 char *check_trash_dir()
 {
     char *path = memalloc(PATH_MAX * sizeof(char));
-
+    DIR *dp;
     char *trash_dir;
+
     #ifdef TRASH_DIR
         trash_dir = TRASH_DIR;
         strcpy(path, trash_dir);
@@ -483,16 +485,22 @@ char *check_trash_dir()
         wpprintw("Trash directory not defined");
         return NULL;
     } else {
-        /* if trash_dir has ~ then make it $HOME */
-        /* use path as trash_dir */
-        if (trash_dir[0] == '~') {
-            path = replace_home(path);
-        }
+        /* if trash_dir exists in the filesystem */
+        if ((dp = opendir(path)) != NULL) {
+            /* if trash_dir has ~ then make it $HOME */
+            /* use path as trash_dir */
+            if (trash_dir[0] == '~') {
+                path = replace_home(path);
+            }
 
-        /* if has access to trash_dir */
-        if (access(path, F_OK) != 0) {
-            /* create the directory with 755 permissions if it doesn't exist */
-            mkdir_p(path);        
+            /* if has access to trash_dir */
+            if (access(path, F_OK) != 0) {
+                /* create the directory with 755 permissions if it doesn't exist */
+                mkdir_p(path);        
+            }
+        } else {
+            wpprintw("No trash directory in the filesystem");
+            return NULL;
         }
     }
     return path;
