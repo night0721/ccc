@@ -172,7 +172,7 @@ int main(int argc, char** argv)
 
             /* go back by backspace or h or left arrow */
             case BACKSPACE: /* PASSTHROUGH */
-            case LEFT: /* PASSTHROUGH */
+            case LEFT:      /* PASSTHROUGH */
             case 'h':;
                 /* get parent directory */
                 strcpy(p_cwd, cwd);
@@ -428,6 +428,35 @@ void show_help()
     wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
     wrefresh(directory_content);
     wrefresh(preview_content);
+
+    /* read only: 'q', '?' and escape keys */
+    int ch, end = 0;
+    while (!end) {
+        ch = getch();
+        switch (ch) {
+            case 'q':
+                end = 1;
+                break;
+            case '?':
+                end = 1;
+                break;
+            case ESC:
+                end = 1;
+                break;
+            case KEY_RESIZE:
+                delwin(directory_border);
+                delwin(directory_content);
+                delwin(preview_border);
+                delwin(preview_content);
+                delwin(panel);
+                endwin();
+                start_ccc(); 
+                highlight_current_line();
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 void start_ccc()
