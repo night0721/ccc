@@ -837,10 +837,11 @@ void show_file_content()
 {
     file current_file = files->items[current_selection];
 
+	wclear(preview_content);
     if (strncmp(current_file.type, "DIR", 3) == 0)
+		/* Print dir content */
         return;
 
-    wclear(preview_content);
 
     FILE *file = fopen(current_file.path, "r");
     if (file == NULL) {
