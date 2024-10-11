@@ -1075,6 +1075,9 @@ void delete_files()
                     change_dir(cwd, 0, 0);
                 }
             }
+			for (int i = 0; i < marked->length; i++) {
+				arraylist_remove(marked, 0);
+			}
         } else {
             wpprintw("TODO: implement hard delete");
         }

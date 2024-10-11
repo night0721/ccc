@@ -60,12 +60,13 @@ void arraylist_remove(ArrayList *list, long index)
     if (index >= list->length)
         return;
 
+	/* marked stuff doesn't work with this
     free(list->items[index].name);
     free(list->items[index].path);
     free(list->items[index].type);
     free(list->items[index].stats);
     free(list->items[index].icon);
-
+	*/
     for (long i = index; i < list->length - 1; i++)
         list->items[i] = list->items[i + 1];
 
