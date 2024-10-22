@@ -19,10 +19,10 @@ In COLS:
 0 will make them equal (at the center),
 15 will make files bigger
 -15 will make preview bigger */
-#define WINDOW_OFFSET 0
+#define WINDOW_OFFSET -20
 
 /* Options */
-#define DRAW_BORDERS true   /* draw borders around windows */
+#define DRAW_BORDERS false   /* draw borders around windows */
 #define DRAW_PREVIEW true   /* draw file preview */
 
 #define SHOW_HIDDEN true    /* show hidden files/dotfiles at startup */
