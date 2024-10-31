@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <wchar.h>
 
 #include "icons.h"
 #include "util.h"
@@ -30,91 +29,91 @@ void hashtable_init()
     
     icon *c = memalloc(sizeof(icon));
     strcpy(c->name, "c");
-    c->icon = L"";
+    c->icon = "";
 
     icon *h = memalloc(sizeof(icon));
     strcpy(h->name, "h");
-    h->icon = L"";
+    h->icon = "";
 
     icon *cpp = memalloc(sizeof(icon));
     strcpy(cpp->name, "cpp");
-    cpp->icon = L"";
+    cpp->icon = "";
 
     icon *hpp = memalloc(sizeof(icon));
     strcpy(hpp->name, "hpp");
-    hpp->icon = L"󰰀";
+    hpp->icon = "󰰀";
 
     icon *md = memalloc(sizeof(icon));
     strcpy(md->name, "md");
-    md->icon = L"";
+    md->icon = "";
 
     icon *py = memalloc(sizeof(icon));
     strcpy(py->name, "py");
-    py->icon = L"";
+    py->icon = "";
 
     icon *java = memalloc(sizeof(icon));
     strcpy(java->name, "java");
-    java->icon = L"";
+    java->icon = "";
 
     icon *json = memalloc(sizeof(icon));
     strcpy(json->name, "json");
-    json->icon = L"";
+    json->icon = "";
 
     icon *js = memalloc(sizeof(icon));
     strcpy(js->name, "js");
-    js->icon = L"";
+    js->icon = "";
 
     icon *html = memalloc(sizeof(icon));
     strcpy(html->name, "html");
-    html->icon = L"";
+    html->icon = "";
 
     icon *rs = memalloc(sizeof(icon));
     strcpy(rs->name, "rs");
-    rs->icon = L"";
+    rs->icon = "";
 
     icon *sh = memalloc(sizeof(icon));
     strcpy(sh->name, "sh");
-    sh->icon = L"";
+    sh->icon = "";
 
     icon *go = memalloc(sizeof(icon));
     strcpy(go->name, "go");
-    go->icon = L"";
+    go->icon = "";
 
     icon *r = memalloc(sizeof(icon));
     strcpy(r->name, "r");
-    r->icon = L"";
+    r->icon = "";
 
     icon *diff = memalloc(sizeof(icon));
     strcpy(diff->name, "diff");
-    diff->icon = L"";
+    diff->icon = "";
 
     icon *hs = memalloc(sizeof(icon));
     strcpy(hs->name, "hs");
-    hs->icon = L"";
+    hs->icon = "";
 
     icon *log = memalloc(sizeof(icon));
     strcpy(log->name, "log");
-    log->icon = L"󱀂";
+    log->icon = "󱀂";
 
     icon *rb = memalloc(sizeof(icon));
     strcpy(rb->name, "rb");
-    rb->icon = L"";
+    rb->icon = "";
 
     icon *iso = memalloc(sizeof(icon));
     strcpy(iso->name, "iso");
-    iso->icon = L"󰻂";
+    iso->icon = "󰻂";
 
     icon *lua = memalloc(sizeof(icon));
     strcpy(lua->name, "lua");
-    lua->icon = L"";
+    lua->icon = "";
     
     icon *license = memalloc(sizeof(icon));
     strcpy(license->name, "LICENSE");
-    license->icon = L"";
+    license->icon = "";
 
     icon *gitignore = memalloc(sizeof(icon));
     strcpy(gitignore->name, "gitignore");
-    gitignore->icon = L"";
+    gitignore->icon = "";
 
     hashtable_add(c);
     hashtable_add(h);
@@ -148,7 +147,7 @@ void hashtable_print()
         if (hash_table[i] == NULL) {
             printf("%i. ---\n", i);
         } else {
-            printf("%i. | Name %s | Icon %ls\n", i, hash_table[i]->name, hash_table[i]->icon);
+            printf("%i. | Name %s | Icon %s\n", i, hash_table[i]->name, hash_table[i]->icon);
         }
     }
 }

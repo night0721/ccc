@@ -19,14 +19,11 @@ In COLS:
 0 will make them equal (at the center),
 15 will make files bigger
 -15 will make preview bigger */
-#define WINDOW_OFFSET -20
+#define WINDOW_OFFSET -65
 
 /* Options */
-#define DRAW_BORDERS false   /* draw borders around windows */
-#define DRAW_PREVIEW true   /* draw file preview */
-
 #define SHOW_HIDDEN true    /* show hidden files/dotfiles at startup */
-#define SHOW_DETAILS true   /* show file details at startup */
+#define SHOW_DETAILS false   /* show file details at startup */
 #define SHOW_ICONS true     /* show file icons at startup */
 
 /* Calculate directories' sizes RECURSIVELY upon entering
@@ -54,4 +51,26 @@ In COLS:
 #define UP 0x103
 #define LEFT 0x104
 #define RIGHT 0x105
-#define BACKSPACE 0x107
+#define RESIZE 278
+
+/* Colros */
+#define GREEN "166;227;161"
+#define BLUE "137;180;250"
+#define PINK "245;194;231"
+#define RED "243;139;168"
+#define YELLOW "249;226;175"
+#define LAVENDER "180;190;254"
+#define WHITE "205;214;244"
+
+enum keys {
+	BACKSPACE = 127,
+	ARROW_LEFT = 1000,
+	ARROW_RIGHT,
+	ARROW_UP,
+	ARROW_DOWN,
+	DEL_KEY,
+	HOME_KEY,
+	END_KEY,
+	PAGE_UP,
+	PAGE_DOWN
+};

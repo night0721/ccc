@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
 
 void die(char *reason)
 {
@@ -21,22 +20,12 @@ void *memalloc(size_t size)
 
 void *estrdup(void *ptr)
 {
-    void *duped = strdup(ptr);
-    if (!duped) {
+    void *dup = strdup(ptr);
+    if (!dup) {
         perror("ccc");
         exit(EXIT_FAILURE);
     }
-    return duped;
-}
-
-void *ewcsdup(void *ptr)
-{
-    void *duped = wcsdup(ptr);
-    if (!duped) {
-        perror("ccc");
-        exit(EXIT_FAILURE);
-    }
-    return duped;
+    return dup;
 }
 
 void *rememalloc(void *ptr, size_t size)
