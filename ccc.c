@@ -847,12 +847,7 @@ void show_file_content()
 	int pid = fork();
 	if (pid == 0) {
 		/* Child */
-		/*
-		close(pipe_fd[0]);
-		dup2(pipe_fd[1], STDOUT_FILENO);
-		dup2(pipe_fd[1], STDERR_FILENO);
-		close(pipe_fd[1]);
-		*/
+		
 		move_cursor(1, half_width);
 		if (strstr(current_file.name, ".jpg") || strstr(current_file.name, ".png")) {
 			sixel_encoder_t *encoder = NULL;
@@ -864,15 +859,17 @@ void show_file_content()
 			sixel_encoder_encode(encoder, current_file.name);
 			sixel_encoder_unref(encoder);
 		} else {
+			close(pipe_fd[0]);
+			dup2(pipe_fd[1], STDOUT_FILENO);
+			dup2(pipe_fd[1], STDERR_FILENO);
+			close(pipe_fd[1]);
 			execlp("nsh", "nsh", current_file.name, NULL);
 		}
 		_exit(1);
 	} else if (pid > 0) {
 		/* Parent */
-		/*
-		close(pipe_fd[1]);
-		*/
 		if (strstr(current_file.name, ".jpg") == NULL && strstr(current_file.name, ".png") == NULL) {
+			close(pipe_fd[1]);
 			char buffer[4096];
 			int row = 1;
 			FILE *stream = fdopen(pipe_fd[0], "r");
