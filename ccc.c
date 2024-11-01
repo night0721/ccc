@@ -21,6 +21,7 @@
 #include "util.h"
 
 /* functions' definitions */
+void handle_sigwinch();
 void cleanup();
 void show_help();
 int read_key();
@@ -107,6 +108,16 @@ int main(int argc, char **argv)
 	/* check if it is interactive shell */
 	if (!isatty(STDIN_FILENO)) 
 		die("ccc: No tty detected. ccc requires an interactive shell to run.\n");
+
+	struct sigaction sa;
+	sa.sa_handler = handle_sigwinch;
+	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+
+	if (sigaction(SIGWINCH, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(1);
+	}
 
 	/* initialize screen, don't print special chars,
 	 * make ctrl + c work, don't show cursor 
@@ -404,6 +415,13 @@ int main(int argc, char **argv)
 	}
 
 	return 0;
+}
+
+void handle_sigwinch()
+{
+	get_window_size(&rows, &cols);
+	half_width = cols / 2 + WINDOW_OFFSET;
+	list_files();
 }
 
 void cleanup()
