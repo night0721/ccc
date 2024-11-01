@@ -142,10 +142,8 @@ int main(int argc, char **argv)
 	getcwd(cwd, PATH_MAX);
 	p_cwd = memalloc(PATH_MAX);
 	p_cwd[0] = '\0';
-	get_window_size(&rows, &cols);
-
-	half_width = cols / 2 + WINDOW_OFFSET;
 	populate_files(cwd, 0, &files);
+	handle_sigwinch();
 
 	if (to_open_file) {
 		sel_file = arraylist_search(files, argv_cp, true);
@@ -155,10 +153,7 @@ int main(int argc, char **argv)
 	int ch, ch2;
 	int run = 1;
 	while (run) {
-		if (cols < 80 || rows < 24) {
-			cleanup();
-			die("ccc: Terminal size needs to be at least 80x24");
-		}
+		
 		ch = read_key();
 		switch (ch) {
 			/* quit */
@@ -420,6 +415,10 @@ int main(int argc, char **argv)
 void handle_sigwinch()
 {
 	get_window_size(&rows, &cols);
+	if (cols < 80 || rows < 24) {
+		cleanup();
+		die("ccc: Terminal size needs to be at least 80x24");
+	}
 	half_width = cols / 2 + WINDOW_OFFSET;
 	list_files();
 }

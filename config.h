@@ -19,7 +19,7 @@ In COLS:
 0 will make them equal (at the center),
 15 will make files bigger
 -15 will make preview bigger */
-#define WINDOW_OFFSET -65
+#define WINDOW_OFFSET -30
 
 /* Options */
 #define SHOW_HIDDEN true    /* show hidden files/dotfiles at startup */
