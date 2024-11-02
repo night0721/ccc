@@ -976,6 +976,12 @@ void show_file_content()
 
 					putchar('\n');
 				}
+				/* Check if the line ends with the ANSI reset sequence `\033[0m` */
+				size_t len = strlen(buffer);
+				if (len >= 4 && strcmp(&buffer[len - 4], "\033[0m") == 0) {
+					/* Line ends with ANSI reset, print it */
+					printf("\033[0m");
+				}
 			}
 			fclose(stream);
 		}
