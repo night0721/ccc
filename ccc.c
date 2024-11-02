@@ -24,8 +24,6 @@
 void handle_sigwinch();
 void cleanup();
 void show_help();
-int read_key();
-void resize_dimensions();
 char *check_trash_dir();
 void change_dir(const char *buf, int selection, int ftype);
 void mkdir_p(const char *destdir);
@@ -49,6 +47,7 @@ void create_file();
 void delete_files();
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
+int read_key();
 int get_window_size(int *row, int *col);
 void bprintf(const char *fmt, ...);
 
@@ -153,7 +152,7 @@ int main(int argc, char **argv)
 	int ch, ch2;
 	int run = 1;
 	while (run) {
-		
+
 		ch = read_key();
 		switch (ch) {
 			/* quit */
@@ -820,6 +819,49 @@ void list_files()
 	show_file_content();
 }
 
+size_t get_effective_length(const char *str)
+{
+	size_t length = 0;
+	bool in_ansi_sequence = false;
+
+	while (*str) {
+		if (*str == '\033') {
+			in_ansi_sequence = true;
+		} else if (in_ansi_sequence && *str == 'm') {
+			in_ansi_sequence = false;
+		} else if (!in_ansi_sequence) {
+			length++;
+		}
+		str++;
+	}
+
+	return length;
+}
+
+void print_chunk(const char *str, size_t start, size_t end)
+{
+	bool in_ansi_sequence = false;
+	size_t printed_length = 0;
+
+	for (size_t i = start; i < end; i++) {
+		if (str[i] == '\033') {
+			in_ansi_sequence = true;
+		}
+		if (in_ansi_sequence) {
+			putchar(str[i]);
+			if (str[i] == 'm') {
+				in_ansi_sequence = false;
+			}
+		} else {
+			putchar(str[i]);
+			printed_length++;
+			if (printed_length >= (end - start)) {
+				break;
+			}
+		}
+	}
+}
+
 /*
  * Get file content into buffer and show it to preview window
  */
@@ -864,7 +906,7 @@ void show_file_content()
 	int pid = fork();
 	if (pid == 0) {
 		/* Child */
-		
+
 		move_cursor(1, half_width);
 		if (strstr(current_file.name, ".jpg") || strstr(current_file.name, ".png")) {
 			sixel_encoder_t *encoder = NULL;
@@ -892,22 +934,47 @@ void show_file_content()
 			FILE *stream = fdopen(pipe_fd[0], "r");
 			while (fgets(buffer, sizeof(buffer), stream) != NULL && row <= rows - 1) {
 				buffer[strcspn(buffer, "\n")] = 0;
-				size_t len = strlen(buffer);
-				size_t offset = 0;
 
-				/* Print each line in chunks of `half_width` */
-				while (len > 0 && row <= rows - 1) {
+				if (buffer[0] == '\0' || strspn(buffer, " \t") == strlen(buffer)) {
+					move_cursor(row++, half_width);
+					putchar('\n');
+					continue;
+				}
+				/* Length without ANSI codes */
+				size_t effective_len = get_effective_length(buffer);
+				size_t offset = 0;
+				while (effective_len > 0 && row <= rows - 1) {
 					move_cursor(row++, half_width);
 
-					/* Using all the window space on the right */
-					if (len > (cols - half_width)) {
-						printf("%.*s\n", cols - half_width, buffer + offset);
-						offset += (cols - half_width);
-						len -= (cols - half_width);
-					} else {
-						printf("%s\n", buffer + offset);
-						break;
+					/* Calculate the chunk size based on effective length */
+					size_t chunk_size = (effective_len > (cols - half_width)) ? (cols - half_width) : effective_len;
+
+					/* Find the actual end position in the string to avoid cutting ANSI sequences */
+					size_t actual_end = offset;
+					size_t visible_count = 0;
+					bool in_ansi_sequence = false;
+
+					while (visible_count < chunk_size && buffer[actual_end] != '\0') {
+						if (buffer[actual_end] == '\033') {
+							in_ansi_sequence = true;
+						}
+						if (!in_ansi_sequence) {
+							visible_count++;
+						}
+						if (in_ansi_sequence && buffer[actual_end] == 'm') {
+							in_ansi_sequence = false;
+						}
+						actual_end++;
 					}
+
+					/* Print the chunk from `offset` to `actual_end` */
+					print_chunk(buffer, offset, actual_end);
+
+					/* Update offsets based on the effective length and ANSI-aware chunk */
+					offset = actual_end;
+					effective_len -= chunk_size;
+
+					putchar('\n');
 				}
 			}
 			fclose(stream);
