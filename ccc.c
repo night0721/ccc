@@ -21,33 +21,33 @@
 #include "util.h"
 
 /* functions' definitions */
-void handle_sigwinch();
-void cleanup();
-void show_help();
-char *check_trash_dir();
+void handle_sigwinch(int ignore);
+void cleanup(void);
+void show_help(void);
+char *check_trash_dir(void);
 void change_dir(const char *buf, int selection, int ftype);
 void mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype, ArrayList **list);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 void add_file_stat(char *filename, char *path, int ftype);
 char *get_file_mode(mode_t mode);
-void list_files();
-void show_file_content();
-void edit_file();
-void toggle_executable();
+void list_files(void);
+void show_file_content(void);
+void edit_file(void);
+void toggle_executable(void);
 char *replace_home(char *str);
-int write_last_d();
+int write_last_d(void);
 int sort_compare(const void *a, const void *b);
-void sort_files();
+void sort_files(void);
 char *get_panel_string(char *prompt);
-void rename_file();
-void goto_dir();
-void create_dir();
-void create_file();
-void delete_files();
+void rename_file(void);
+void goto_dir(void);
+void create_dir(void);
+void create_file(void);
+void delete_files(void);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
-int read_key();
+int read_key(void);
 int get_window_size(int *row, int *col);
 void bprintf(const char *fmt, ...);
 
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 	p_cwd = memalloc(PATH_MAX);
 	p_cwd[0] = '\0';
 	populate_files(cwd, 0, &files);
-	handle_sigwinch();
+	handle_sigwinch(-1);
 
 	if (to_open_file) {
 		sel_file = arraylist_search(files, argv_cp, true);
@@ -407,7 +407,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void handle_sigwinch()
+void handle_sigwinch(int ignore)
 {
 	get_window_size(&rows, &cols);
 	if (cols < 80 || rows < 24) {
@@ -418,7 +418,7 @@ void handle_sigwinch()
 	list_files();
 }
 
-void cleanup()
+void cleanup(void)
 {
 	if (argv_cp != NULL)
 		free(argv_cp);
@@ -433,7 +433,7 @@ void cleanup()
 	bprintf("\033[2J\033[?1049l\033[?25h");
 }
 
-void show_help()
+void show_help(void)
 {
 	bprintf("\033[2J");
 	move_cursor(1, 1);
@@ -456,7 +456,7 @@ void show_help()
 /*
  * Checks if the trash directory is set and returns it
  */
-char *check_trash_dir()
+char *check_trash_dir(void)
 {
 	char *path = memalloc(PATH_MAX);
 
@@ -752,7 +752,7 @@ char *get_file_mode(mode_t mode)
 /*
  * Print files in directory window 
  */
-void list_files()
+void list_files(void)
 {
 	long overflow = 0;
 	if (sel_file > rows - 4) {
@@ -779,7 +779,6 @@ void list_files()
 	move_cursor(1, 1);
 	bprintf("\033[2J");
 
-	long line_count = 0;
 	for (long i = overflow; i < range; i++) {
 		int is_selected = 0;
 		if ((overflow == 0 && i == sel_file) ||
@@ -808,7 +807,6 @@ void list_files()
 				is_selected ? "48" : "38", is_marked ? GREEN : color, line);
 
 		free(line);
-		line_count++;
 	}
 
 	/* show file content every time cursor changes */
@@ -861,7 +859,7 @@ void print_chunk(const char *str, size_t start, size_t end)
 /*
  * Get file content into buffer and show it to preview window
  */
-void show_file_content()
+void show_file_content(void)
 {
 	file current_file = files->items[sel_file];
 
@@ -990,7 +988,7 @@ void show_file_content()
 /*
  * Opens $EDITOR to edit the file
  */
-void edit_file()
+void edit_file(void)
 {
 #ifdef EDITOR
 	char *editor = EDITOR;
@@ -1013,7 +1011,7 @@ void edit_file()
 	}
 }
 
-void toggle_executable()
+void toggle_executable(void)
 {
 	file f = files->items[sel_file];
 	struct stat st;
@@ -1043,7 +1041,7 @@ char *replace_home(char *str)
 	return newstr;
 }
 
-int write_last_d()
+int write_last_d(void)
 {
 #ifdef LAST_D
 	char *last_d = estrdup(LAST_D);
@@ -1082,7 +1080,7 @@ int sort_compare(const void *a, const void *b)
 	return strcmp(((file *) a)->name, ((file *) b)->name);
 }
 
-void sort_files()
+void sort_files(void)
 {
 	qsort(files->items, files->length, sizeof(file), sort_compare);
 	list_files();
@@ -1127,7 +1125,7 @@ char *get_panel_string(char *prompt)
 	return input;
 }
 
-void rename_file()
+void rename_file(void)
 {
 	char *filename = files->items[sel_file].path;
 	char *input = get_panel_string("Rename file: ");
@@ -1149,7 +1147,7 @@ void rename_file()
 	free(newfilename);
 }
 
-void goto_dir()
+void goto_dir(void)
 {
 	char *input = get_panel_string("Goto dir: ");
 	struct stat st;
@@ -1167,7 +1165,7 @@ void goto_dir()
 	free(input);
 }
 
-void create_dir()
+void create_dir(void)
 {
 	char *input = get_panel_string("New dir: ");
 	char *newfilename = memalloc(PATH_MAX);
@@ -1183,7 +1181,7 @@ void create_dir()
 	free(newfilename);
 }
 
-void create_file()
+void create_file(void)
 {
 	char *input = get_panel_string("New file: ");
 	FILE *f = fopen(input, "w+");
@@ -1193,7 +1191,7 @@ void create_file()
 	free(input);
 }
 
-void delete_files()
+void delete_files(void)
 {
 	if (marked->length) {
 		char *trash_dir = check_trash_dir();
@@ -1238,7 +1236,7 @@ void move_cursor(int row, int col)
 	bprintf("\033[%d;%dH", row, col);
 }
 
-int read_key()
+int read_key(void)
 {
 	int nread;
 	char c;

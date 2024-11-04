@@ -12,8 +12,8 @@ typedef struct {
 } icon;
 
 unsigned int hash(char *name);
-void hashtable_init();
-void hashtable_print();
+void hashtable_init(void);
+void hashtable_print(void);
 bool hashtable_add(icon *p);
 icon *hashtable_search(char *name);
 

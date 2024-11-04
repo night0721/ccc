@@ -22,7 +22,7 @@ unsigned int hash(char *name)
     return hash_value;
 }
 
-void hashtable_init()
+void hashtable_init(void)
 {
     for (int i = 0; i < TABLE_SIZE; i++)
         hash_table[i] = NULL;
@@ -139,7 +139,7 @@ void hashtable_init()
     hashtable_add(gitignore);
 }
 
-void hashtable_print()
+void hashtable_print(void)
 {
     int i = 0;
 
