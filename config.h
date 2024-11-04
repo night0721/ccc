@@ -51,7 +51,6 @@ In COLS:
 #define UP 0x103
 #define LEFT 0x104
 #define RIGHT 0x105
-#define RESIZE 278
 
 /* Colros */
 #define GREEN "166;227;161"

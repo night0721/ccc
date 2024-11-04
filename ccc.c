@@ -399,10 +399,6 @@ int main(int argc, char **argv)
 			case ESC:
 					 break;
 
-			case RESIZE:
-					 half_width = cols / 2 + WINDOW_OFFSET;
-					 list_files();
-					 break;
 			default:
 					 break;
 		}
