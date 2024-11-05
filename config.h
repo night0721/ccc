@@ -42,15 +42,10 @@ In COLS:
 
 /* Keybindings */
 #define CTRLD 0x04
-#define ENTER 0xA
+#define ENTER 0xD
 #define CTRLU 0x15
-#define ESC 0x1B
 #define SPACE 0x20
 #define TILDE 0x7E
-#define DOWN 0x102
-#define UP 0x103
-#define LEFT 0x104
-#define RIGHT 0x105
 
 /* Colros */
 #define GREEN "166;227;161"

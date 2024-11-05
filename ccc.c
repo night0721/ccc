@@ -165,31 +165,31 @@ int main(int argc, char **argv)
 				run = 0;
 				break;
 
-				/* reload using z */
+			/* reload */
 			case 'z':
 				change_dir(cwd, 0, 0); 
 				break;
 
-				/* go back by backspace or h or left arrow */
-			case BACKSPACE: /* PASSTHROUGH */
-			case LEFT: /* PASSTHROUGH */
+			/* go back */
+			case BACKSPACE:
+			case ARROW_LEFT:
 			case 'h':;
-					 /* get parent directory */
-					 strcpy(p_cwd, cwd);
-					 char *last_slash = strrchr(cwd, '/');
-					 if (last_slash != NULL) {
-						 if (last_slash == cwd) {
-							 change_dir("/", 0, 0);
-							 break;
-						 }
-						 *last_slash = '\0';
-						 change_dir(cwd, 0, 0);
-					 }
-					 break;
+				/* get parent directory */
+				strcpy(p_cwd, cwd);
+				char *last_slash = strrchr(cwd, '/');
+				if (last_slash != NULL) {
+					if (last_slash == cwd) {
+						change_dir("/", 0, 0);
+						break;
+					}
+					*last_slash = '\0';
+					change_dir(cwd, 0, 0);
+				}
+				break;
 
-					 /* enter directory/open a file using enter or l or right arrow */
-			case ENTER: /* PASSTHROUGH */
-			case RIGHT: /* PASSTHROUGH */
+			/* enter directory/open a file */
+			case ENTER:
+			case ARROW_RIGHT:
 			case 'l':
 					 strcpy(p_cwd, cwd);
 					 file c_file = files->items[sel_file];
@@ -215,189 +215,185 @@ int main(int argc, char **argv)
 					 }
 					 break;
 
-					 /* jump up (ctrl u) */
+			/* jump up */
 			case CTRLU:
-					 if ((sel_file - JUMP_NUM) > 0)
-						 sel_file -= JUMP_NUM;
-					 else
-						 sel_file = 0;
+				if ((sel_file - JUMP_NUM) > 0)
+					sel_file -= JUMP_NUM;
+				else
+					sel_file = 0;
 
-					 list_files();
-					 break;
+				list_files();
+				break;
 
-					 /* go up by k or up arrow */
-			case UP: /* PASSTHROUGH */
+			/* go up */
+			case ARROW_UP:
 			case 'k':
-					 if (sel_file > 0)
-						 sel_file--;
+				if (sel_file > 0)
+					sel_file--;
 
-					 list_files();
-					 break;
+				list_files();
+				break;
 
-					 /* jump down (ctrl d) */
+			/* jump down */
 			case CTRLD:
-					 if ((sel_file + JUMP_NUM) < (files->length - 1))
-						 sel_file += JUMP_NUM;
-					 else
-						 sel_file = (files->length - 1);
+				if ((sel_file + JUMP_NUM) < (files->length - 1))
+					sel_file += JUMP_NUM;
+				else
+					sel_file = (files->length - 1);
 
-					 list_files();
-					 break;
+				list_files();
+				break;
 
-					 /* go down by j or down arrow */
-			case DOWN: /* PASSTHROUGH */
+			/* go down */
+			case ARROW_DOWN:
 			case 'j':
-					 if (sel_file < (files->length - 1))
-						 sel_file++;
+				if (sel_file < (files->length - 1))
+					sel_file++;
 
-					 list_files();
-					 break;
+				list_files();
+				break;
 
-					 /* jump to the bottom */
+			/* jump to the bottom */
 			case 'G':
 					 sel_file = (files->length - 1);
 					 list_files();
 					 break;
 
-					 /* jump to the top */
+			/* jump to the top */
 			case 'g':
-					 ch2 = read_key();
-					 switch (ch2) {
-						 case 'g':
-							 sel_file = 0;
-							 list_files();
-							 break;
-						 default:
-							 break;
-					 }
-					 break;
+				ch2 = read_key();
+				switch (ch2) {
+					case 'g':
+						sel_file = 0;
+						list_files();
+						break;
+					default:
+						break;
+				}
+				break;
 
-					 /* '~' go to $HOME */
+			/* '~' go to $HOME */
 			case TILDE:;
-					   char *home = getenv("HOME");
-					   if (home == NULL) {
-						   wpprintw("$HOME not defined");
-					   } else {
-						   change_dir(home, 0, 0);
-					   }
-					   break;
+				char *home = getenv("HOME");
+				if (home == NULL) {
+					wpprintw("$HOME not defined");
+				} else {
+					change_dir(home, 0, 0);
+				}
+				break;
 
-					   /* go to the trash dir */
+			/* go to the trash dir */
 			case 't':;
-					 char *trash_dir = check_trash_dir();
-					 if (trash_dir != NULL) {
-						 strcpy(p_cwd, cwd);
-						 change_dir(trash_dir, 0, 0);
-					 }
-					 break;
+				char *trash_dir = check_trash_dir();
+				if (trash_dir != NULL) {
+					strcpy(p_cwd, cwd);
+					change_dir(trash_dir, 0, 0);
+				}
+				break;
 
-					 /* sort files */
+			/* sort files */
 			case 'u':
-					 sort_files();
-					 break;
+				sort_files();
+				break;
 
-					 /* show directories' sizes */
+			/* show directories' sizes */
 			case 'A':
-					 dirs_size = !dirs_size;
-					 change_dir(cwd, 0, 0);
-					 break;
+				dirs_size = !dirs_size;
+				change_dir(cwd, 0, 0);
+				break;
 
-					 /* go to previous dir */
+			/* go to previous dir */
 			case '-':
-					 if (strlen(p_cwd) != 0)
-						 change_dir(p_cwd, 0, 0);
-					 break;
+				if (strlen(p_cwd) != 0)
+					change_dir(p_cwd, 0, 0);
+				break;
 
-					 /* show help */
+			/* show help */
 			case '?':
-					 show_help();
-					 break;
+				show_help();
+				break;
 
-					 /* toggle hidden files */
+			/* toggle hidden files */
 			case '.':
-					 show_hidden = !show_hidden;
-					 change_dir(cwd, 0, 0);
-					 break;
+				show_hidden = !show_hidden;
+				change_dir(cwd, 0, 0);
+				break;
 
-					 /* toggle file details */
+			/* toggle file details */
 			case 'i':
-					 file_details = !file_details;
-					 change_dir(cwd, 0, 0);
-					 break;
+				file_details = !file_details;
+				change_dir(cwd, 0, 0);
+				break;
 
 			case 'w':
-					 show_icons = !show_icons;
-					 change_dir(cwd, 0, 0);
-					 break;
+				show_icons = !show_icons;
+				change_dir(cwd, 0, 0);
+				break;
 
 			case 'f':
-					 create_file();
-					 break;
+				create_file();
+				break;
 
 			case 'n':
-					 create_dir();
-					 break;
+				create_dir();
+				break;
 
 			case 'r':
-					 rename_file();
-					 break;
+				rename_file();
+				break;
 
 			case ':':
-					 goto_dir();
-					 break;
+				goto_dir();
+				break;
 
 			case 'X':
-					 toggle_executable();
-					 break;
+				toggle_executable();
+				break;
 
-					 /* mark one file */
+			/* mark one file */
 			case SPACE:
-					 add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
-					 list_files();
-					 break;
+				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
+				list_files();
+				break;
 
-					 /* mark all files in directory */
+			/* mark all files in directory */
 			case 'a':
-					 change_dir(cwd, sel_file, 2); /* reload current dir */
-					 break;
+				change_dir(cwd, sel_file, 2); /* reload current dir */
+				break;
 
-					 /* mark actions: */
-					 /* delete */
+			/* mark actions: */
+			/* delete */
 			case 'd':
-					 delete_files();
-					 break;
+				delete_files();
+				break;
 
-					 /* move */
+			/* move */
 			case 'm':
-					 if (marked->length) {
-						 ;
-					 }
-					 break;
+			if (marked->length) {
+				;
+			}
+			break;
 
-					 /* copy */
+			/* copy */
 			case 'c':
-					 if (marked->length) {
-						 ;
-					 }
-					 break;
+			if (marked->length) {
+				;
+			}
+			break;
 
-					 /* symbolic link */
+			/* symbolic link */
 			case 's':
-					 if (marked->length) {
-						 ;
-					 }
-					 break;
+			if (marked->length) {
+				;
+			}
+			break;
 
-					 /* bulk rename */
+			/* bulk rename */
 			case 'b':
-					 if (marked->length) {
-						 ;
-					 }
-					 break;
-
-					 /* escape */
-			case ESC:
-					 break;
+			if (marked->length) {
+				;
+			}
+			break;
 
 			default:
 					 break;
@@ -1245,6 +1241,10 @@ int read_key(void)
 			die("read");
 		}
 	}
+
+	FILE *f = fopen("/home/night/a", "a");
+	fprintf(f, "c: %d\n", c);
+	fclose(f);
 
 	if (c == '\033') {
 		char seq[3];
