@@ -13,17 +13,17 @@ Consider this project incomplete and WIP!
 | File details                   |   X    |         |
 | File icons!                    |   X    |         |
 | Searching for files            |        |         |
-| Sorting                        |        |         |
+| Sorting                        |   X    |         |
 | Marking and marking operations |        |         |
 | Other operations on files      |        |         |
-| Image previews                 |        |         |
+| Image previews                 |   X    |         |
 | Help                           |   X    |         |
 | History                        |        |         |
 | Bookmarks                      |        |         |
 | Bulk rename                    |        |         |
 
 ## Features added that are not in [fff](https://github.com/night0721/fff):
-- File preview (without highlighting)
+- File preview
 
 # Usage
 ```
@@ -93,7 +93,6 @@ p: execute paste/move/delete/bulk_rename
 ```
 
 # Dependencies
-- ncurses
 - Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
 
 # Building
