@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 			/* go back */
 			case BACKSPACE:
 			case ARROW_LEFT:
-			case 'h':;
+			case 'h':
 				/* get parent directory */
 				strcpy(p_cwd, cwd);
 				char *last_slash = strrchr(cwd, '/');
@@ -191,29 +191,29 @@ int main(int argc, char **argv)
 			case ENTER:
 			case ARROW_RIGHT:
 			case 'l':
-					 strcpy(p_cwd, cwd);
-					 file c_file = files->items[sel_file];
+				strcpy(p_cwd, cwd);
+				file c_file = files->items[sel_file];
 
-					 /* Check if it is directory or a regular file */
-					 if (c_file.type == DRY) {
-						 /* Change cwd to directory */
-						 change_dir(c_file.path, 0, 0); 
-					 } else if (c_file.type == REG) {
-						 /* Write opened file to a file for file pickers */
-						 if (file_picker) {
-							 char *opened_file_path = memalloc(PATH_MAX);
-							 strcpy(opened_file_path, "~/.cache/ccc/opened_file");
-							 opened_file_path = replace_home(opened_file_path);
-							 FILE *opened_file = fopen(opened_file_path, "w+");
-							 fprintf(opened_file, "%s\n", c_file.path);
-							 fclose(opened_file);
-							 cleanup();
-							 run = 0;
-						 } else {
-							 edit_file();
-						 }
-					 }
-					 break;
+				/* Check if it is directory or a regular file */
+				if (c_file.type == DRY) {
+					/* Change cwd to directory */
+					change_dir(c_file.path, 0, 0); 
+				} else if (c_file.type == REG) {
+					/* Write opened file to a file for file pickers */
+					if (file_picker) {
+						char *opened_file_path = memalloc(PATH_MAX);
+						strcpy(opened_file_path, "~/.cache/ccc/opened_file");
+						opened_file_path = replace_home(opened_file_path);
+						FILE *opened_file = fopen(opened_file_path, "w+");
+						fprintf(opened_file, "%s\n", c_file.path);
+						fclose(opened_file);
+						cleanup();
+						run = 0;
+					} else {
+						edit_file();
+					}
+				}
+				break;
 
 			/* jump up */
 			case CTRLU:
@@ -255,9 +255,9 @@ int main(int argc, char **argv)
 
 			/* jump to the bottom */
 			case 'G':
-					 sel_file = (files->length - 1);
-					 list_files();
-					 break;
+				sel_file = (files->length - 1);
+				list_files();
+				break;
 
 			/* jump to the top */
 			case 'g':
@@ -369,34 +369,34 @@ int main(int argc, char **argv)
 
 			/* move */
 			case 'm':
-			if (marked->length) {
-				;
-			}
-			break;
+				if (marked->length) {
+					;
+				}
+				break;
 
 			/* copy */
 			case 'c':
-			if (marked->length) {
-				;
-			}
-			break;
+				if (marked->length) {
+					;
+				}
+				break;
 
 			/* symbolic link */
 			case 's':
-			if (marked->length) {
-				;
-			}
-			break;
+				if (marked->length) {
+					;
+				}
+				break;
 
 			/* bulk rename */
 			case 'b':
-			if (marked->length) {
-				;
-			}
-			break;
+				if (marked->length) {
+					;
+				}
+				break;
 
 			default:
-					 break;
+				break;
 		}
 	}
 
@@ -1002,8 +1002,19 @@ void edit_file(void)
 		char command[length];
 
 		snprintf(command, length, "%s %s", editor, filename);
-		system(command);
-		list_files();
+		pid_t pid = fork();
+		if (pid == 0) {
+			/* Child process */
+			execlp(editor, editor, filename, NULL);
+			_exit(1); /* Exit if exec fails */
+		} else if (pid > 0) {
+			/* Parent process */
+			waitpid(pid, NULL, 0);
+			list_files();
+		} else {
+			/* Fork failed */
+			wpprintw("fork failed: %s", strerror(errno));
+		}
 	}
 }
 
