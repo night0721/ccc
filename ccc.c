@@ -1253,10 +1253,6 @@ int read_key(void)
 		}
 	}
 
-	FILE *f = fopen("/home/night/a", "a");
-	fprintf(f, "c: %d\n", c);
-	fclose(f);
-
 	if (c == '\033') {
 		char seq[3];
 
