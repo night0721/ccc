@@ -997,11 +997,7 @@ void edit_file(void)
 		return;
 	} else {
 		char *filename = files->items[sel_file].path;
-		/* 1 for space 1 for null */
-		int length = strlen(editor) + strlen(filename) + 2;
-		char command[length];
 
-		snprintf(command, length, "%s %s", editor, filename);
 		pid_t pid = fork();
 		if (pid == 0) {
 			/* Child process */
