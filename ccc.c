@@ -152,7 +152,6 @@ int main(int argc, char **argv)
 	int ch, ch2;
 	int run = 1;
 	while (run) {
-
 		ch = read_key();
 		switch (ch) {
 			/* quit */
