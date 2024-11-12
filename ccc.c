@@ -911,12 +911,12 @@ void show_file_content(void)
 			dup2(pipe_fd[1], STDOUT_FILENO);
 			dup2(pipe_fd[1], STDERR_FILENO);
 			close(pipe_fd[1]);
-			execlp("nsh", "nsh", current_file.name, NULL);
+			execlp("vip", "vip", "-c", current_file.name, NULL);
 		}
 		_exit(1);
 	} else if (pid > 0) {
 		/* Parent */
-		if (strstr(current_file.name, ".jpg") == NULL && strstr(current_file.name, ".png") == NULL) {
+		if (!strstr(current_file.name, ".jpg") && !strstr(current_file.name, ".png")) {
 			close(pipe_fd[1]);
 			char buffer[4096];
 			int row = 1;
