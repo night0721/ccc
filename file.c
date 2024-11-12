@@ -71,10 +71,9 @@ void arraylist_remove(ArrayList *list, long index)
 /*
  * Force will not remove duplicate marked files, instead it just skip adding
  */
-void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, char color[12], bool marked, bool force)
+void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, bool marked, bool force)
 {
-	file new_file = { name, path, type, stats, icon };
-	memcpy(new_file.color, color, 12);
+	file new_file = { name, path, type, stats, icon, color };
 
 	if (list->capacity != list->length) {
 		if (marked) {

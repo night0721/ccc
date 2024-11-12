@@ -47,15 +47,6 @@ In COLS:
 #define SPACE 0x20
 #define TILDE 0x7E
 
-/* Colros */
-#define GREEN "166;227;161"
-#define BLUE "137;180;250"
-#define PINK "245;194;231"
-#define RED "243;139;168"
-#define YELLOW "249;226;175"
-#define LAVENDER "180;190;254"
-#define WHITE "205;214;244"
-
 enum keys {
 	BACKSPACE = 127,
 	ARROW_LEFT = 1000,

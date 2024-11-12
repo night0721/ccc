@@ -610,7 +610,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	if (stat(path, &file_stat) == -1) {
 		/* can't be triggered? */
 		if (errno == EACCES)
-			arraylist_add(files, filename, path, NULL, REG, NULL, WHITE, false, false);
+			arraylist_add(files, filename, path, NULL, REG, NULL, 37, false, false);
 	}
 
 	int type;
@@ -631,39 +631,37 @@ void add_file_stat(char *filename, char *path, int ftype)
 	else 
 		memcpy(icon_str, ext_icon->icon, 5);
 
-	char color[12];
+	int color = 37;
 
 	if (S_ISDIR(file_stat.st_mode)) {
 		type = DRY; /* dir */
-		strncpy(color, BLUE, 12);
+		color = 34;
 		memcpy(icon_str, "󰉋", 5);
 	} else if (S_ISREG(file_stat.st_mode)) {
 		type = REG; /* regular file */
-		strncpy(color, WHITE, 12);
+		color = 37;
 	} else if (S_ISLNK(file_stat.st_mode)) {
 		type = LNK; /* symbolic link */
-		strncpy(color, GREEN, 12);
+		color = 32;
 	} else if (S_ISCHR(file_stat.st_mode)) {
 		type = CHR; /* character device */
-		strncpy(color, YELLOW, 12);
+		color = 33;
 	} else if (S_ISSOCK(file_stat.st_mode)) {
 		type = SOC; /* socket */
-		strncpy(color, PINK, 12);
+		color = 35;
 	} else if (S_ISBLK(file_stat.st_mode)) {
 		type = BLK; /* block device */
-		strncpy(color, YELLOW, 12);
+		color = 33;
 	} else if (S_ISFIFO(file_stat.st_mode)) {
 		type = FIF; /* FIFO */
-		strncpy(color, PINK, 12);
-	} else {
-		strncpy(color, WHITE, 12);
+		color = 35;
 	}
 
 	/* If file is to be marked */
 	if (ftype == 1 || ftype == 2) {
 		/* Force if user is marking all files */
 		bool force = ftype == 2 ? true : false;
-		arraylist_add(marked, filename, path, NULL, type, icon_str, WHITE, true, force);
+		arraylist_add(marked, filename, path, NULL, type, icon_str, 37, true, force);
 		/* free type and return without allocating more stuff */
 		return;
 	}
@@ -704,7 +702,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	/* get file mode string */
 	char *mode_str = get_file_mode(file_stat.st_mode);
 	if (mode_str[0] == '-' && (mode_str[3] == 'x' || mode_str[6] == 'x' || mode_str[9] == 'x')) {
-		strncpy(color, GREEN, 12);
+		color = 32;
 	}
 
 	/* mode_str(11) + time(17) + size_size + 2 spaces + 1 null */
@@ -713,7 +711,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	snprintf(total_stat, stat_size, "%s %s %-*s", mode_str, time, size_size, size);
 
 	/* DIR if color is blue */
-	if (strncmp(color, BLUE, 12) == 0)
+	if (color == 34)
 		arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, false, false);
 	else
 		arraylist_add(tmp2, filename, path, total_stat, type, icon_str, color, false, false);
@@ -794,12 +792,13 @@ void list_files(void)
 		}
 		/* print the actual filename and stats */
 		char *line = get_line(files, i, file_details, show_icons);
-		char *color = files->items[i].color;
+		int color = files->items[i].color;
 		/* check is file marked for action */
 		bool is_marked = arraylist_search(marked, files->items[i].path, false) != -1;
 		move_cursor(i + 1, 1);
-		bprintf("\033[38;2;0;0;0m\033[%s;2;%sm%s\033[0m\n",
-				is_selected ? "48" : "38", is_marked ? GREEN : color, line);
+		if (is_marked) color = 32;
+		bprintf("\033[30m\033[%dm%s\033[0m\n",
+				is_selected ? color + 10 : color, line);
 
 		free(line);
 	}
@@ -864,9 +863,9 @@ void show_file_content(void)
 		populate_files(current_file.name, 0, &files_visit);
 		for (long i = 0; i < files_visit->length; i++) {
 			char *line = get_line(files_visit, i, false, show_icons);
-			char *color = files_visit->items[i].color;
+			int color = files_visit->items[i].color;
 			move_cursor(i + 1, half_width);
-			bprintf("\033[K\033[38;2;%sm%s\033[0m\n", color, line);
+			bprintf("\033[K\033[%dm%s\033[m\n", color, line);
 		}
 		arraylist_free(files_visit);
 		return;
