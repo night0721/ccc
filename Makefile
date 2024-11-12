@@ -4,7 +4,6 @@
 VERSION = 1.0
 TARGET = ccc
 MANPAGE = $(TARGET).1
-CONF = config.h
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
@@ -15,7 +14,7 @@ CFLAGS = -Os -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall
 
 SRC = ccc.c util.c file.c icons.c
 
-$(TARGET): $(SRC) $(CONF)
+$(TARGET): $(SRC) config.h 
 	$(CC) $(SRC) -o $@ $(CFLAGS) $(LDFLAGS)
 
 dist:
