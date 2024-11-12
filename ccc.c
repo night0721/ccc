@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
-#include <dirent.h>		 /* directories etc. */
+#include <dirent.h>
 #include <errno.h>
 #include <ftw.h>
 #include <time.h>
@@ -20,7 +20,6 @@
 #include "icons.h"
 #include "util.h"
 
-/* functions' definitions */
 void handle_sigwinch(int ignore);
 void cleanup(void);
 void show_help(void);
@@ -686,6 +685,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	}
 	/* 4 before decimal + 1 dot + DECIMAL_PLACES (after decimal) +
 	   unit length (1 for K, 3 for KiB, taking units[1] as B never changes) + 1 space + 1 null */
+	static const char* units[] = {"B", "K", "M", "G", "T", "P"};
 	int size_size = 4 + 1 + DECIMAL_PLACES + strlen(units[1]) + 1 + 1;
 	char *size = memalloc(size_size);
 	int unit = 0;
@@ -757,8 +757,12 @@ void list_files(void)
 	long range = files->length;
 	/* not highlight if no files in directory */
 	if (range == 0 && errno == 0) {
+		for (int i = 0; i < rows; i++) {
+			move_cursor(i + 1, 1);
+			bprintf("\033[K");
+		}
 		move_cursor(1, half_width);
-		printf("empty directory");
+		bprintf("empty directory");
 		return;
 	}
 
