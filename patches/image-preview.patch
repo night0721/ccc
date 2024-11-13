@@ -1,7 +1,6 @@
-From a50fcb841a399f45b6fae92aecec4bf1cb3f6e66 Mon Sep 17 00:00:00 2001
 From: night0721 <night@night0721.xyz>
 Date: Wed, 13 Nov 2024 09:44:54 +0000
-Subject: [PATCH] Image support with libsixel
+Subject: [PATCH] Image preview support with libsixel
 
 ---
  Makefile |   4 +-
