@@ -1,6 +1,7 @@
 #define PATH_MAX 4096 /* Max length of path */
+
 /* Settings */
-static int panel_height = 1; /* panel height */
+static int panel_height = 1; /* Panel height */
 static int jump_num = 14; /* Length of ctrl + u/d jump */
 static int decimal_place = 1; /* Number of decimal places size can be shown */
 

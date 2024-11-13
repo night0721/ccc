@@ -1,5 +1,5 @@
 # ccc
-`ccc` is a rewrite of [fff](https://github.com/night0721/fff) in C aiming for usefulness and speed.
+`ccc` is a rewrite of [fff](https://github.com/bogdan-the-great/fff) in C aiming for usefulness, size and speed with no dependency.
 
 The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity. You may call it a `soft fork`.
 
@@ -21,7 +21,7 @@ Consider this project incomplete and WIP!
 | Bookmarks                      |        |         |
 | Bulk rename                    |        |         |
 
-## Features added that are not in [fff](https://github.com/night0721/fff):
+## Features added that are not in [fff](https://github.com/bogdan-the-great/fff):
 - File preview
 
 # Usage
@@ -92,8 +92,8 @@ p: execute paste/move/delete/bulk_rename
 ```
 
 # Dependencies
-- libsixel
 - Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
+- libsixel (Optional)
 
 # Building
 You will need to run these with elevated privilages.
