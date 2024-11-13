@@ -55,10 +55,6 @@ unsigned int focus = 0;
 long sel_file = 0;
 bool file_picker = false;
 bool to_open_file = false;
-bool dirs_size = DIRS_SIZE;
-bool show_hidden = SHOW_HIDDEN;
-bool file_details = SHOW_DETAILS;
-bool show_icons = SHOW_ICONS;
 char *argv_cp;
 char *cwd;
 char *p_cwd; /* previous cwd */
@@ -215,8 +211,8 @@ int main(int argc, char **argv)
 
 			/* jump up */
 			case CTRLU:
-				if ((sel_file - JUMP_NUM) > 0)
-					sel_file -= JUMP_NUM;
+				if ((sel_file - jump_num) > 0)
+					sel_file -= jump_num;
 				else
 					sel_file = 0;
 
@@ -234,8 +230,8 @@ int main(int argc, char **argv)
 
 			/* jump down */
 			case CTRLD:
-				if ((sel_file + JUMP_NUM) < (files->length - 1))
-					sel_file += JUMP_NUM;
+				if ((sel_file + jump_num) < (files->length - 1))
+					sel_file += jump_num;
 				else
 					sel_file = (files->length - 1);
 
@@ -319,7 +315,7 @@ int main(int argc, char **argv)
 
 			/* toggle file details */
 			case 'i':
-				file_details = !file_details;
+				show_details = !show_details;
 				change_dir(cwd, 0, 0);
 				break;
 
@@ -408,7 +404,7 @@ void handle_sigwinch(int ignore)
 		cleanup();
 		die("ccc: Terminal size needs to be at least 80x24");
 	}
-	half_width = cols / 2 + WINDOW_OFFSET;
+	half_width = cols / 2 + window_offset;
 	list_files();
 }
 
@@ -677,10 +673,10 @@ void add_file_stat(char *filename, char *path, int ftype)
 			bytes = total_dir_size;
 		}
 	}
-	/* 4 before decimal + 1 dot + DECIMAL_PLACES (after decimal) +
+	/* 4 before decimal + 1 dot + decimal_place (after decimal) +
 	   unit length (1 for K, 3 for KiB, taking units[1] as B never changes) + 1 space + 1 null */
 	static const char* units[] = {"B", "K", "M", "G", "T", "P"};
-	int size_size = 4 + 1 + DECIMAL_PLACES + strlen(units[1]) + 1 + 1;
+	int size_size = 4 + 1 + decimal_place + strlen(units[1]) + 1 + 1;
 	char *size = memalloc(size_size);
 	int unit = 0;
 	while (bytes > 1024) {
@@ -691,7 +687,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	if (bytes == (unsigned int) bytes) {
 		sprintf(size, "%d%s", (unsigned int) bytes, units[unit]);
 	} else {
-		sprintf(size, "%.*f%s", DECIMAL_PLACES, bytes, units[unit]);
+		sprintf(size, "%.*f%s", decimal_place, bytes, units[unit]);
 	}
 	/* get file mode string */
 	char *mode_str = get_file_mode(file_stat.st_mode);
@@ -789,7 +785,7 @@ void list_files(void)
 			}
 		}
 		/* print the actual filename and stats */
-		char *line = get_line(files, i, file_details, show_icons);
+		char *line = get_line(files, i, show_details, show_icons);
 		int color = files->items[i].color;
 		/* check is file marked for action */
 		bool is_marked = arraylist_search(marked, files->items[i].path, false) != -1;

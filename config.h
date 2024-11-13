@@ -1,11 +1,8 @@
+#define PATH_MAX 4096 /* Max length of path */
 /* Settings */
-#define PH 1                /* panel height */
-#define JUMP_NUM 14         /* how long ctrl + u/d jump are */
-#define PATH_MAX 4096       /* max length of the path */
-#define DECIMAL_PLACES 1    /* how many decimal places show size with */
-
-/* Size units */
-static const char* units[] = {"B", "K", "M", "G", "T", "P"};
+static int panel_height = 1; /* panel height */
+static int jump_num = 14; /* Length of ctrl + u/d jump */
+static int decimal_place = 1; /* Number of decimal places size can be shown */
 
 /* Set width offset for windows:
 +-------------%-------------+
@@ -19,26 +16,26 @@ In COLS:
 0 will make them equal (at the center),
 15 will make files bigger
 -15 will make preview bigger */
-#define WINDOW_OFFSET -30
+static int window_offset = -30;
 
 /* Options */
-#define SHOW_HIDDEN true    /* show hidden files/dotfiles at startup */
-#define SHOW_DETAILS false   /* show file details at startup */
-#define SHOW_ICONS true     /* show file icons at startup */
+static int show_hidden = 1; /* Show hidden files/dotfiles at startup */
+static int show_details = 0; /* Show file details at startup */
+static int show_icons = 1; /* Show file icons at startup */
 
 /* Calculate directories' sizes RECURSIVELY upon entering
    `A` keybind at the startup
  **VERY EXPENSIVE**, **CAN TAKE UP TO A MINUTE IN ROOT** */
-#define DIRS_SIZE false
+static int dirs_size = 0;
 
 /* Default text editor */
-#define EDITOR "nvim"
+static const char *editor = "nvim";
 
 /* File location to write last directory */
-#define LAST_D "~/.cache/ccc/.ccc_d"
+static char last_d[PATH_MAX] = "~/.cache/ccc/.ccc_d";
 
 /* Will create this directory if doesn't exist! */
-#define TRASH_DIR "~/.cache/ccc/trash/"
+static char trash_dir[PATH_MAX]  = "~/.cache/ccc/trash/";
 
 /* Keybindings */
 #define CTRLD 0x04
