@@ -34,7 +34,7 @@ void list_files(void);
 void show_file_content(void);
 void edit_file(void);
 void toggle_executable(void);
-char *replace_home(char *str);
+void replace_home(char *str);
 int write_last_d(void);
 int sort_compare(const void *a, const void *b);
 void sort_files(void);
@@ -199,9 +199,9 @@ int main(int argc, char **argv)
 				} else if (c_file.type == REG) {
 					/* Write opened file to a file for file pickers */
 					if (file_picker) {
-						char *opened_file_path = memalloc(PATH_MAX);
+						char opened_file_path[PATH_MAX];
 						strcpy(opened_file_path, "~/.cache/ccc/opened_file");
-						opened_file_path = replace_home(opened_file_path);
+						replace_home(opened_file_path);
 						FILE *opened_file = fopen(opened_file_path, "w+");
 						fprintf(opened_file, "%s\n", c_file.path);
 						fclose(opened_file);
@@ -454,22 +454,16 @@ char *check_trash_dir(void)
 {
 	char *path = memalloc(PATH_MAX);
 
-	char *trash_dir;
-#ifdef TRASH_DIR
-	trash_dir = TRASH_DIR;
-	strcpy(path, trash_dir);
-#endif
-
 	/* check if there is trash_dir */
-	if (trash_dir == NULL) {
+	if (!strcmp(trash_dir, "")) {
 		wpprintw("Trash directory not defined");
 		return NULL;
 	} else {
+		strcpy(path, trash_dir);
 		/* if trash_dir has ~ then make it $HOME */
 		/* use path as trash_dir */
-		if (trash_dir[0] == '~') {
-			path = replace_home(path);
-		}
+		if (path[0] == '~')
+			replace_home(path);
 
 		/* if has access to trash_dir */
 		if (access(path, F_OK) != 0) {
@@ -988,15 +982,12 @@ void show_file_content(void)
  */
 void edit_file(void)
 {
-#ifdef EDITOR
-	char *editor = EDITOR;
-#else
-	char *editor = getenv("EDITOR");
-#endif
-
 	if (editor == NULL) {
-		wpprintw("$EDITOR not defined");
-		return;
+		editor = getenv("EDITOR");
+		if (editor == NULL) {
+			wpprintw("$EDITOR not defined");
+			return;
+		}
 	} else {
 		char *filename = files->items[sel_file].path;
 
@@ -1032,35 +1023,34 @@ void toggle_executable(void)
 
 }
 
-char *replace_home(char *str)
+void replace_home(char *str)
 {
 	char *home = getenv("HOME");
 	if (home == NULL) {
 		wpprintw("$HOME not defined");
-		return str;
+		return;
 	}
-	char *newstr = memalloc(strlen(str) + strlen(home));
+	int len = strlen(str) + strlen(home) + 1;
+	char newstr[len];
 	/* replace ~ with home */
-	snprintf(newstr, strlen(str) + strlen(home), "%s%s", home, str + 1);
-	free(str);
-	return newstr;
+	snprintf(newstr, len, "%s%s", home, str + 1);
+	strcpy(str, newstr);
 }
 
 int write_last_d(void)
 {
-#ifdef LAST_D
-	char *last_d = estrdup(LAST_D);
-#else
-	char *last_d = getenv("CCC_LAST_D");
-#endif
-	if (last_d == NULL) {
-		wpprintw("$CCC_LAST_D not defined (Press enter to continue)");
-		return -1;
-	} else {
-		if (last_d[0] == '~') {
-			last_d = replace_home(last_d);
+	if (!strcmp(last_d, "")) {
+		strcpy(last_d, getenv("CCC_LAST_D"));
+		if (!strcmp(last_d, "")) {
+			wpprintw("$CCC_LAST_D not defined (Press enter to continue)");
+			return -1;
 		}
-		char *last_ddup = estrdup(last_d);
+	} else {
+		if (last_d[0] == '~')
+			replace_home(last_d);
+
+		char last_ddup[PATH_MAX];
+		strcpy(last_ddup, last_d);
 
 		char *last_d_dir = strrchr(last_ddup, '/');
 		if (last_d_dir != NULL) {
@@ -1074,8 +1064,6 @@ int write_last_d(void)
 		}
 		fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
 		fclose(last_d_file);
-		free(last_ddup);
-		free(last_d);
 	}
 	return 0;
 }
@@ -1122,12 +1110,11 @@ char *get_panel_string(char *prompt)
 			buf[buflen] = '\0';
 		}
 	}
-	char *input = memalloc(PATH_MAX);
 
-	if (input[0] == '~') {
-		input = replace_home(input);
-	}
-	return input;
+	if (buf[0] == '~')
+		replace_home(buf);
+
+	return buf;
 }
 
 void rename_file(void)
