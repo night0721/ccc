@@ -890,7 +890,6 @@ void show_file_content(void)
 	int pid = fork();
 	if (pid == 0) {
 		/* Child */
-
 		move_cursor(1, half_width);
 		if (strstr(current_file.name, ".jpg") || strstr(current_file.name, ".png")) {
 			sixel_encoder_t *encoder = NULL;
