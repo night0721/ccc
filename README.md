@@ -15,7 +15,6 @@ Consider this project incomplete and WIP!
 | Searching for files            |        |         |
 | Sorting                        |   X    |         |
 | Marking and marking operations |        |         |
-| Other operations on files      |        |         |
 | Image previews                 |   X    |         |
 | Help                           |   X    |         |
 | History                        |        |         |
@@ -93,6 +92,7 @@ p: execute paste/move/delete/bulk_rename
 ```
 
 # Dependencies
+- libsixel
 - Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
 
 # Building
