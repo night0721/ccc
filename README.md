@@ -3,6 +3,8 @@
 
 The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity. You may call it a `soft fork`.
 
+Configuration can be done via `config.h` and patches are available(current only for image preview).
+
 # Features
 Consider this project incomplete and WIP!
 
@@ -21,7 +23,7 @@ Consider this project incomplete and WIP!
 | Bookmarks                      |        |         |
 | Bulk rename                    |        |         |
 
-## Features added that are not in [fff](https://github.com/bogdan-the-great/fff):
+## Features added that are not in fff:
 - File preview
 
 # Usage
