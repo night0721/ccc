@@ -1,9 +1,7 @@
 # ccc
-`ccc` is a rewrite of [fff](https://github.com/bogdan-the-great/fff) in C aiming for usefulness, size and speed with no dependency.
+Soft fork of [fff](https://github.com/bogdan-the-great/fff) in C aiming for size and speed with no dependency, extensible with patches and configurable via `config.h`
 
-The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity. You may call it a `soft fork`.
-
-Configuration can be done via `config.h` and patches are available(current only for image preview).
+The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity.
 
 # Features
 Consider this project incomplete and WIP!
