@@ -13,8 +13,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#include <sixel.h>
-
 #include "config.h"
 #include "file.h"
 #include "icons.h"
@@ -872,14 +870,12 @@ void show_file_content(void)
 		return;
 	}
 
-	if (strstr(current_file.name, ".jpg") == NULL && strstr(current_file.name, ".png") == NULL) {
-		int c;
-		/* Check if its binary */
-		while ((c = fgetc(file)) != EOF) {
-			if (c == '\0') {
-				bprintf("binary");
-				return;
-			}
+	int c;
+	/* Check if its binary */
+	while ((c = fgetc(file)) != EOF) {
+		if (c == '\0') {
+			bprintf("binary");
+			return;
 		}
 	}
 	int pipe_fd[2];
@@ -891,83 +887,70 @@ void show_file_content(void)
 	if (pid == 0) {
 		/* Child */
 		move_cursor(1, half_width);
-		if (strstr(current_file.name, ".jpg") || strstr(current_file.name, ".png")) {
-			sixel_encoder_t *encoder = NULL;
-			sixel_encoder_new(&encoder, NULL);
-			/* Should be enough for most terminal */
-			char width[5];
-			snprintf(width, 5, "%d", (cols - half_width) * 6);
-			sixel_encoder_setopt(encoder, 'w', width);
-			sixel_encoder_encode(encoder, current_file.name);
-			sixel_encoder_unref(encoder);
-		} else {
-			close(pipe_fd[0]);
-			dup2(pipe_fd[1], STDOUT_FILENO);
-			dup2(pipe_fd[1], STDERR_FILENO);
-			close(pipe_fd[1]);
-			execlp("vip", "vip", "-c", current_file.name, NULL);
-		}
+		close(pipe_fd[0]);
+		dup2(pipe_fd[1], STDOUT_FILENO);
+		dup2(pipe_fd[1], STDERR_FILENO);
+		close(pipe_fd[1]);
+		execlp("vip", "vip", "-c", current_file.name, NULL);
 		_exit(1);
 	} else if (pid > 0) {
 		/* Parent */
-		if (!strstr(current_file.name, ".jpg") && !strstr(current_file.name, ".png")) {
-			close(pipe_fd[1]);
-			char buffer[4096];
-			int row = 1;
-			FILE *stream = fdopen(pipe_fd[0], "r");
-			while (fgets(buffer, sizeof(buffer), stream) != NULL && row <= rows - 1) {
-				buffer[strcspn(buffer, "\n")] = 0;
+		close(pipe_fd[1]);
+		char buffer[4096];
+		int row = 1;
+		FILE *stream = fdopen(pipe_fd[0], "r");
+		while (fgets(buffer, sizeof(buffer), stream) != NULL && row <= rows - 1) {
+			buffer[strcspn(buffer, "\n")] = 0;
 
-				if (buffer[0] == '\0' || strspn(buffer, " \t") == strlen(buffer)) {
-					move_cursor(row++, half_width);
-					putchar('\n');
-					continue;
-				}
-				/* Length without ANSI codes */
-				size_t effective_len = get_effective_length(buffer);
-				size_t offset = 0;
-				while (effective_len > 0 && row <= rows - 1) {
-					move_cursor(row++, half_width);
-
-					/* Calculate the chunk size based on effective length */
-					size_t chunk_size = (effective_len > (cols - half_width)) ? (cols - half_width) : effective_len;
-
-					/* Find the actual end position in the string to avoid cutting ANSI sequences */
-					size_t actual_end = offset;
-					size_t visible_count = 0;
-					bool in_ansi_sequence = false;
-
-					while (visible_count < chunk_size && buffer[actual_end] != '\0') {
-						if (buffer[actual_end] == '\033') {
-							in_ansi_sequence = true;
-						}
-						if (!in_ansi_sequence) {
-							visible_count++;
-						}
-						if (in_ansi_sequence && buffer[actual_end] == 'm') {
-							in_ansi_sequence = false;
-						}
-						actual_end++;
-					}
-
-					/* Print the chunk from `offset` to `actual_end` */
-					print_chunk(buffer, offset, actual_end);
-
-					/* Update offsets based on the effective length and ANSI-aware chunk */
-					offset = actual_end;
-					effective_len -= chunk_size;
-
-					putchar('\n');
-				}
-				/* Check if the line ends with the ANSI reset sequence `\033[0m` */
-				size_t len = strlen(buffer);
-				if (len >= 4 && strcmp(&buffer[len - 4], "\033[0m") == 0) {
-					/* Line ends with ANSI reset, print it */
-					printf("\033[0m");
-				}
+			if (buffer[0] == '\0' || strspn(buffer, " \t") == strlen(buffer)) {
+				move_cursor(row++, half_width);
+				putchar('\n');
+				continue;
 			}
-			fclose(stream);
+			/* Length without ANSI codes */
+			size_t effective_len = get_effective_length(buffer);
+			size_t offset = 0;
+			while (effective_len > 0 && row <= rows - 1) {
+				move_cursor(row++, half_width);
+
+				/* Calculate the chunk size based on effective length */
+				size_t chunk_size = (effective_len > (cols - half_width)) ? (cols - half_width) : effective_len;
+
+				/* Find the actual end position in the string to avoid cutting ANSI sequences */
+				size_t actual_end = offset;
+				size_t visible_count = 0;
+				bool in_ansi_sequence = false;
+
+				while (visible_count < chunk_size && buffer[actual_end] != '\0') {
+					if (buffer[actual_end] == '\033') {
+						in_ansi_sequence = true;
+					}
+					if (!in_ansi_sequence) {
+						visible_count++;
+					}
+					if (in_ansi_sequence && buffer[actual_end] == 'm') {
+						in_ansi_sequence = false;
+					}
+					actual_end++;
+				}
+
+				/* Print the chunk from `offset` to `actual_end` */
+				print_chunk(buffer, offset, actual_end);
+
+				/* Update offsets based on the effective length and ANSI-aware chunk */
+				offset = actual_end;
+				effective_len -= chunk_size;
+
+				putchar('\n');
+			}
+			/* Check if the line ends with the ANSI reset sequence `\033[0m` */
+			size_t len = strlen(buffer);
+			if (len >= 4 && strcmp(&buffer[len - 4], "\033[0m") == 0) {
+				/* Line ends with ANSI reset, print it */
+				printf("\033[0m");
+			}
 		}
+		fclose(stream);
 		waitpid(pid, NULL, 0);
 	} else {
 		wpprintw("fork failed: %s", strerror(errno));
