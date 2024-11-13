@@ -599,7 +599,8 @@ void add_file_stat(char *filename, char *path, int ftype)
 	if (stat(path, &file_stat) == -1) {
 		/* can't be triggered? */
 		if (errno == EACCES)
-			arraylist_add(files, filename, path, NULL, REG, NULL, 37, false, false);
+			arraylist_add(files, filename, path, NULL, REG, NULL, DEF_COLOR, false,
+					false);
 	}
 
 	int type;
@@ -620,37 +621,38 @@ void add_file_stat(char *filename, char *path, int ftype)
 	else 
 		memcpy(icon_str, ext_icon->icon, 5);
 
-	int color = 37;
+	int color = DEF_COLOR;
 
 	if (S_ISDIR(file_stat.st_mode)) {
 		type = DRY; /* dir */
-		color = 34;
+		color = DIR_COLOR;
 		memcpy(icon_str, "󰉋", 5);
 	} else if (S_ISREG(file_stat.st_mode)) {
 		type = REG; /* regular file */
-		color = 37;
+		color = REG_COLOR;
 	} else if (S_ISLNK(file_stat.st_mode)) {
 		type = LNK; /* symbolic link */
-		color = 32;
+		color = LNK_COLOR;
 	} else if (S_ISCHR(file_stat.st_mode)) {
 		type = CHR; /* character device */
-		color = 33;
+		color = CHR_COLOR;
 	} else if (S_ISSOCK(file_stat.st_mode)) {
 		type = SOC; /* socket */
-		color = 35;
+		color = SOC_COLOR;
 	} else if (S_ISBLK(file_stat.st_mode)) {
 		type = BLK; /* block device */
-		color = 33;
+		color = BLK_COLOR;
 	} else if (S_ISFIFO(file_stat.st_mode)) {
 		type = FIF; /* FIFO */
-		color = 35;
+		color = FIF_COLOR;
 	}
 
 	/* If file is to be marked */
 	if (ftype == 1 || ftype == 2) {
 		/* Force if user is marking all files */
 		bool force = ftype == 2 ? true : false;
-		arraylist_add(marked, filename, path, NULL, type, icon_str, 37, true, force);
+		arraylist_add(marked, filename, path, NULL, type, icon_str, DEF_COLOR, true,
+				force);
 		/* free type and return without allocating more stuff */
 		return;
 	}
@@ -692,7 +694,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	/* get file mode string */
 	char *mode_str = get_file_mode(file_stat.st_mode);
 	if (mode_str[0] == '-' && (mode_str[3] == 'x' || mode_str[6] == 'x' || mode_str[9] == 'x')) {
-		color = 32;
+		color = EXE_COLOR;
 	}
 
 	/* mode_str(11) + time(17) + size_size + 2 spaces + 1 null */

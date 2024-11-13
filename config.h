@@ -4,6 +4,19 @@ static int panel_height = 1; /* panel height */
 static int jump_num = 14; /* Length of ctrl + u/d jump */
 static int decimal_place = 1; /* Number of decimal places size can be shown */
 
+/* Colors for files */
+enum files_colors {
+	DIR_COLOR = 34, /* Directory */
+	REG_COLOR = 37, /* Regular file */
+	LNK_COLOR = 32, /* Symbolic link */
+	CHR_COLOR = 33, /* Character device */
+	SOC_COLOR = 35, /* Socket */
+	BLK_COLOR = 33, /* Block device */
+	FIF_COLOR = 35, /* FIFO */
+	DEF_COLOR = 37, /* Default */
+	EXE_COLOR = 32, /* Executable file */
+};
+
 /* Set width offset for windows:
 +-------------%-------------+
 |             %             |
