@@ -1,5 +1,5 @@
 # ccc
-Soft fork of [fff](https://github.com/bogdan-the-great/fff) in C aiming for size and speed with no dependency, extensible with patches and configurable via `config.h`
+Soft fork of [fff](https://github.com/bogdan-the-great/fff) in C aiming for size and speed with no dependency, hackable with patches and configurable via `config.h`
 
 The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity.
 
