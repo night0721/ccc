@@ -25,6 +25,11 @@ Consider this project incomplete and WIP!
 - File preview
 
 # Usage
+```sh
+ccc -p dir # File picker
+ccc dir
+```
+
 ```
 h: go to parent dir
 j: scroll down
