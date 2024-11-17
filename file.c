@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "util.h"
 #include "file.h"
@@ -34,9 +33,9 @@ void arraylist_free(ArrayList *list)
 
 /*
  * Check if the file is in the arraylist
- * Treat filepath as base name if bname is true
+ * Treat filepath as base name if bname is 1
  */
-long arraylist_search(ArrayList *list, char *filepath, bool bname)
+long arraylist_search(ArrayList *list, char *filepath, int bname)
 {
 	for (long i = 0; i < list->length; i++) {
 		if (!bname && strcmp(list->items[i].path, filepath) == 0) {
@@ -71,7 +70,7 @@ void arraylist_remove(ArrayList *list, long index)
 /*
  * Force will not remove duplicate marked files, instead it just skip adding
  */
-void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, bool marked, bool force)
+void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, int marked, int force)
 {
 	file new_file = { name, path, type, stats, icon, color };
 
@@ -105,7 +104,7 @@ void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int typ
 /*
  * Construct a formatted line for display
  */
-char *get_line(ArrayList *list, long index, bool detail, bool icons)
+char *get_line(ArrayList *list, long index, int detail, int icons)
 {
 	file file = list->items[index];
 

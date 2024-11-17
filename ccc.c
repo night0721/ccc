@@ -13,10 +13,34 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#include "config.h"
 #include "file.h"
 #include "icons.h"
 #include "util.h"
+
+/* Keybindings */
+enum keys {
+	CTRLD = 0x04,
+	ENTER = 0xD,
+	CTRLU = 0x15,
+	SPACE = 0x20,
+	TILDE = 0x7E,
+	BACKSPACE = 127,
+	ARROW_LEFT = 1000,
+	ARROW_RIGHT,
+	ARROW_UP,
+	ARROW_DOWN,
+	DEL_KEY,
+	HOME_KEY,
+	END_KEY,
+	PAGE_UP,
+	PAGE_DOWN,
+};
+typedef struct {
+	int key;
+} key;
+#define PATH_MAX 4096 /* Max length of path */
+
+#include "config.h"
 
 void handle_sigwinch(int ignore);
 void cleanup(void);
@@ -51,8 +75,8 @@ void bprintf(const char *fmt, ...);
 /* global variables */
 unsigned int focus = 0;
 long sel_file = 0;
-bool file_picker = false;
-bool to_open_file = false;
+int file_picker = 1;
+int to_open_file = 0;
 char *argv_cp;
 char *cwd;
 char *p_cwd; /* previous cwd */
@@ -70,7 +94,7 @@ int main(int argc, char **argv)
 {
 	if (argc == 3) {
 		if (strncmp(argv[2], "-p", 2) == 0)
-			file_picker = true;
+			file_picker = 1;
 	}
 	if (argc <= 3 && argc != 1) {
 		if (strncmp(argv[1], "-h", 2) == 0)
@@ -88,12 +112,14 @@ int main(int argc, char **argv)
 		} else if (S_ISREG(st.st_mode)) {
 			argv_cp = estrdup(argv[1]);
 			char *last_slash = strrchr(argv_cp, '/');
-			*last_slash = '\0';
-			if (chdir(argv[1])) {
-				perror("ccc");
-				die("Error from chdir");
+			if (last_slash) {
+				*last_slash = '\0';
+				if (chdir(argv[1])) {
+					perror("ccc");
+					die("Error from chdir");
+				}
 			}
-			to_open_file = true;
+			to_open_file = 1;
 		}
 	}
 
@@ -138,7 +164,7 @@ int main(int argc, char **argv)
 	handle_sigwinch(-1);
 
 	if (to_open_file) {
-		sel_file = arraylist_search(files, argv_cp, true);
+		sel_file = arraylist_search(files, argv_cp, 1);
 		list_files();
 	}
 
@@ -597,8 +623,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	if (stat(path, &file_stat) == -1) {
 		/* can't be triggered? */
 		if (errno == EACCES)
-			arraylist_add(files, filename, path, NULL, REG, NULL, DEF_COLOR, false,
-					false);
+			arraylist_add(files, filename, path, NULL, REG, NULL, DEF_COLOR, 0, 0);
 	}
 
 	int type;
@@ -648,8 +673,8 @@ void add_file_stat(char *filename, char *path, int ftype)
 	/* If file is to be marked */
 	if (ftype == 1 || ftype == 2) {
 		/* Force if user is marking all files */
-		bool force = ftype == 2 ? true : false;
-		arraylist_add(marked, filename, path, NULL, type, icon_str, DEF_COLOR, true,
+		int force = ftype == 2 ? 1 : 0;
+		arraylist_add(marked, filename, path, NULL, type, icon_str, DEF_COLOR, 1,
 				force);
 		/* free type and return without allocating more stuff */
 		return;
@@ -665,7 +690,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	double bytes = file_stat.st_size;
 
 	if (dirs_size) {
-		/* dirs_size is true, so calculate disk usage */
+		/* dirs_size is 1, so calculate disk usage */
 		if (S_ISDIR(file_stat.st_mode)) {
 			/* at most 15 fd opened */
 			total_dir_size = 0;
@@ -702,9 +727,9 @@ void add_file_stat(char *filename, char *path, int ftype)
 
 	/* DIR if color is blue */
 	if (color == 34)
-		arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, false, false);
+		arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, 0, 0);
 	else
-		arraylist_add(tmp2, filename, path, total_stat, type, icon_str, color, false, false);
+		arraylist_add(tmp2, filename, path, total_stat, type, icon_str, color, 0, 0);
 
 	free(time);
 	free(size);
@@ -788,7 +813,7 @@ void list_files(void)
 		char *line = get_line(files, i, show_details, show_icons);
 		int color = files->items[i].color;
 		/* check is file marked for action */
-		bool is_marked = arraylist_search(marked, files->items[i].path, false) != -1;
+		int is_marked = arraylist_search(marked, files->items[i].path, 0) != -1;
 		move_cursor(i + 1, 1);
 		if (is_marked) color = 32;
 		bprintf("\033[30m\033[%dm%s\033[0m\n",
@@ -804,13 +829,13 @@ void list_files(void)
 size_t get_effective_length(const char *str)
 {
 	size_t length = 0;
-	bool in_ansi_sequence = false;
+	int in_ansi_sequence = 0;
 
 	while (*str) {
 		if (*str == '\033') {
-			in_ansi_sequence = true;
+			in_ansi_sequence = 1;
 		} else if (in_ansi_sequence && *str == 'm') {
-			in_ansi_sequence = false;
+			in_ansi_sequence = 0;
 		} else if (!in_ansi_sequence) {
 			length++;
 		}
@@ -822,17 +847,17 @@ size_t get_effective_length(const char *str)
 
 void print_chunk(const char *str, size_t start, size_t end)
 {
-	bool in_ansi_sequence = false;
+	int in_ansi_sequence = 0;
 	size_t printed_length = 0;
 
 	for (size_t i = start; i < end; i++) {
 		if (str[i] == '\033') {
-			in_ansi_sequence = true;
+			in_ansi_sequence = 1;
 		}
 		if (in_ansi_sequence) {
 			putchar(str[i]);
 			if (str[i] == 'm') {
-				in_ansi_sequence = false;
+				in_ansi_sequence = 0;
 			}
 		} else {
 			putchar(str[i]);
@@ -856,7 +881,7 @@ void show_file_content(void)
 		ArrayList *files_visit;
 		populate_files(current_file.name, 0, &files_visit);
 		for (long i = 0; i < files_visit->length; i++) {
-			char *line = get_line(files_visit, i, false, show_icons);
+			char *line = get_line(files_visit, i, 0, show_icons);
 			int color = files_visit->items[i].color;
 			move_cursor(i + 1, half_width);
 			bprintf("\033[K\033[%dm%s\033[m\n", color, line);
@@ -919,17 +944,17 @@ void show_file_content(void)
 				/* Find the actual end position in the string to avoid cutting ANSI sequences */
 				size_t actual_end = offset;
 				size_t visible_count = 0;
-				bool in_ansi_sequence = false;
+				int in_ansi_sequence = 0;
 
 				while (visible_count < chunk_size && buffer[actual_end] != '\0') {
 					if (buffer[actual_end] == '\033') {
-						in_ansi_sequence = true;
+						in_ansi_sequence = 1;
 					}
 					if (!in_ansi_sequence) {
 						visible_count++;
 					}
 					if (in_ansi_sequence && buffer[actual_end] == 'm') {
-						in_ansi_sequence = false;
+						in_ansi_sequence = 0;
 					}
 					actual_end++;
 				}

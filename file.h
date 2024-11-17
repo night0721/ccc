@@ -2,7 +2,6 @@
 #define FILE_H_
 
 #include <stdio.h>
-#include <stdbool.h>
 
 enum ftypes {
 	REG,
@@ -31,9 +30,9 @@ typedef struct ArrayList {
 
 ArrayList *arraylist_init(size_t capacity);
 void arraylist_free(ArrayList *list);
-long arraylist_search(ArrayList *list, char *filepath, bool bname);
+long arraylist_search(ArrayList *list, char *filepath, int bname);
 void arraylist_remove(ArrayList *list, long index);
-void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, bool marked, bool force);
-char *get_line(ArrayList *list, long index, bool detail, bool icons);
+void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, int marked, int force);
+char *get_line(ArrayList *list, long index, int detail, int icons);
 
 #endif

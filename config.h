@@ -1,6 +1,3 @@
-#define PATH_MAX 4096 /* Max length of path */
-
-/* Settings */
 static int panel_height = 1; /* Panel height */
 static int jump_num = 14; /* Length of ctrl + u/d jump */
 static int decimal_place = 1; /* Number of decimal places size can be shown */
@@ -51,22 +48,8 @@ static char last_d[PATH_MAX] = "~/.cache/ccc/.ccc_d";
 /* Will create this directory if doesn't exist! */
 static char trash_dir[PATH_MAX]  = "~/.cache/ccc/trash/";
 
-/* Keybindings */
-#define CTRLD 0x04
-#define ENTER 0xD
-#define CTRLU 0x15
-#define SPACE 0x20
-#define TILDE 0x7E
+/*
+key keybindings[] = {
 
-enum keys {
-	BACKSPACE = 127,
-	ARROW_LEFT = 1000,
-	ARROW_RIGHT,
-	ARROW_UP,
-	ARROW_DOWN,
-	DEL_KEY,
-	HOME_KEY,
-	END_KEY,
-	PAGE_UP,
-	PAGE_DOWN
-};
+}
+*/

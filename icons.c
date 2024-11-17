@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "icons.h"
 #include "util.h"
@@ -153,9 +152,9 @@ void hashtable_print(void)
 }
 
 /* Gets hashed name and tries to store the icon struct in that place */
-bool hashtable_add(icon *p)
+int hashtable_add(icon *p)
 {
-    if (p == NULL) return false;
+    if (p == NULL) return 0;
 
     int index = hash(p->name);
     int initial_index = index;
@@ -163,11 +162,11 @@ bool hashtable_add(icon *p)
     while (hash_table[index] != NULL) {
         index = (index + 1) % TABLE_SIZE; /* move to next item */
         /* the hash table is full as no available index back to initial index, cannot fit new item */
-        if (index == initial_index) return false;
+        if (index == initial_index) return 0;
     }
 
     hash_table[index] = p;
-    return true;
+    return 1;
 }
 
 /* Rehashes the name and then looks in this spot, if found returns icon */
