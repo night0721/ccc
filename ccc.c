@@ -1016,7 +1016,7 @@ void toggle_executable(void)
 	struct stat st;
 	if (stat(f.path, &st) == -1) {
 		wpprintw("stat failed: %s (Press any key to continue)", strerror(errno));
-		getch();
+		readch();
 		return;
 	}
 	if (f.type == DRY)
