@@ -364,6 +364,9 @@ int main(int argc, char **argv)
 				yank_clipboard();
 				break;
 
+			case 'o':
+			case 'O':
+
 			/* mark one file */
 			case SPACE:
 				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
@@ -586,6 +589,7 @@ void populate_files(const char *path, int ftype, ArrayList **list)
 		if (ftype == 0) {
 			*list = arraylist_init(tmp1->length + tmp2->length);
 			(*list)->length = tmp1->length + tmp2->length;
+			/* Need to see how to sort by date */
 			qsort(tmp1->items, tmp1->length, sizeof(file), sort_compare);
 			qsort(tmp2->items, tmp2->length, sizeof(file), sort_compare);
 			memcpy((*list)->items, tmp1->items, tmp1->length * sizeof(file));
@@ -1011,15 +1015,17 @@ void toggle_executable(void)
 	file f = files->items[sel_file];
 	struct stat st;
 	if (stat(f.path, &st) == -1) {
-		wpprintw("stat failed: %s", strerror(errno));
+		wpprintw("stat failed: %s (Press any key to continue)", strerror(errno));
+		getch();
+		return;
 	}
 	if (f.type == DRY)
 		return;
 	/* chmod by xor executable bits */
 	if (chmod(f.path, st.st_mode ^ (S_IXUSR | S_IXGRP | S_IXOTH)) == -1) {
-		wpprintw("Error toggling executable: %s", strerror(errno));
+		wpprintw("Error toggling executable: %s (Press any key to continue)", strerror(errno));
+		readch();
 	}
-
 }
 
 void replace_home(char *str)
