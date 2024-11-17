@@ -83,8 +83,8 @@ long sel_file = 0;
 int file_picker = 1;
 int to_open_file = 0;
 char *argv_cp;
-char *cwd;
-char *p_cwd; /* previous cwd */
+char cwd[4096];
+char p_cwd[4096]; /* previous cwd */
 int half_width;
 ArrayList *files;
 ArrayList *marked;
@@ -161,10 +161,7 @@ int main(int argc, char **argv)
 	marked = arraylist_init(100);
 	hashtable_init();
 
-	cwd = memalloc(PATH_MAX);
 	getcwd(cwd, PATH_MAX);
-	p_cwd = memalloc(PATH_MAX);
-	p_cwd[0] = '\0';
 	populate_files(cwd, 0, &files);
 	handle_sigwinch(-1);
 
@@ -193,27 +190,27 @@ int main(int argc, char **argv)
 				break;
 
 			/* go back */
-			case BACKSPACE:
-			case ARROW_LEFT:
-			case 'h':
+			case BACKSPACE:;
+			case ARROW_LEFT:;
+			case 'h':;
+				char dir[PATH_MAX];
+				strcpy(dir, cwd);
 				/* get parent directory */
-				strcpy(p_cwd, cwd);
-				char *last_slash = strrchr(cwd, '/');
+				char *last_slash = strrchr(dir, '/');
 				if (last_slash) {
-					if (last_slash == cwd) {
+					if (!strcmp(last_slash, dir)) {
 						change_dir("/", 0, 0);
 						break;
 					}
 					*last_slash = '\0';
-					change_dir(cwd, 0, 0);
+					change_dir(dir, 0, 0);
 				}
 				break;
 
 			/* enter directory/open a file */
-			case ENTER:
-			case ARROW_RIGHT:
-			case 'l':
-				strcpy(p_cwd, cwd);
+			case ENTER:;
+			case ARROW_RIGHT:;
+			case 'l':;
 				file c_file = files->items[sel_file];
 
 				/* Check if it is directory or a regular file */
@@ -284,7 +281,6 @@ int main(int argc, char **argv)
 					wpprintw("$HOME not defined (Press any key to continue)");
 					readch();
 				} else {
-					strcpy(p_cwd, cwd);
 					change_dir(home, 0, 0);
 				}
 				break;
@@ -293,7 +289,6 @@ int main(int argc, char **argv)
 			case 't':;
 				char *trash_dir = check_trash_dir();
 				if (trash_dir) {
-					strcpy(p_cwd, cwd);
 					change_dir(trash_dir, 0, 0);
 				}
 				break;
@@ -504,8 +499,12 @@ char *check_trash_dir(void)
  */
 void change_dir(const char *buf, int selection, int ftype)
 {
-	if (cwd != buf)
-		strcpy(cwd, buf);
+	if (strcmp(cwd, buf) != 0) {
+		char tmp[PATH_MAX];
+		strcpy(tmp, buf);
+		strcpy(p_cwd, cwd);
+		strcpy(cwd, tmp);
+	}
 	if (ftype == 0)
 		arraylist_free(files);
 	chdir(cwd);
@@ -1171,8 +1170,9 @@ void goto_dir(void)
 		wpprintw("chdir failed: %s (Press any key to continue)", strerror(errno));
 		readch();
 	}
-	getcwd(cwd, PATH_MAX);
-	change_dir(cwd, 0, 0);
+	char new_cwd[PATH_MAX];
+	getcwd(new_cwd, PATH_MAX);
+	change_dir(new_cwd, 0, 0);
 	free(input);
 }
 

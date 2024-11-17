@@ -60,9 +60,9 @@ z: refresh current dir
 A: show directory disk usage/block size
 i: toggle file details
 u: sort files
+x: view file/dir attributes
 y: copy filename to clipboard
 !: open shell in current dir
-
 
 f: new file
 n: new dir
@@ -83,7 +83,6 @@ O: open file with a GUI program detached from file manager
 
 /: search
 
-x: view file/dir attributes
 e: show history
 
 c: copy
