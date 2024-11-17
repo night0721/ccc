@@ -13,7 +13,7 @@ enum ftypes {
 	FIF
 };
 
-typedef struct file {
+typedef struct {
 	char *name; /* basename */
 	char *path; /* absolute path */
 	int type;
@@ -22,7 +22,7 @@ typedef struct file {
 	int color;
 } file;
 
-typedef struct ArrayList {
+typedef struct {
 	size_t length;
 	size_t capacity;
 	file *items;
