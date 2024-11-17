@@ -42,6 +42,9 @@ static int dirs_size = 0;
 /* Default text editor */
 static const char *editor = "nvim";
 
+/* Default clipboard program */
+static const char *clipboard = "wl-copy";
+
 /* File location to write last directory */
 static char last_d[PATH_MAX] = "~/.cache/ccc/.ccc_d";
 
