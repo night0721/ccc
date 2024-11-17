@@ -55,18 +55,19 @@ t: go to trash dir
 -: go to previous dir
 z: refresh current dir
 :: go to a directory by typing
-u: sort files
 
 .: toggle hidden files
+A: show directory disk usage/block size
 i: toggle file details
-X: toggle executable
+u: sort files
+y: copy filename to clipboard
 !: open shell in current dir
 
-A: show directory disk usage/block size
 
 f: new file
 n: new dir
 r: rename
+X: toggle executable
 
 space: mark file
 a: mark all files in directory
@@ -84,7 +85,6 @@ O: open file with a GUI program detached from file manager
 
 x: view file/dir attributes
 e: show history
-y: copy filename to clipboard
 
 c: copy
 m: move
