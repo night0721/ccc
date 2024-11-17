@@ -53,7 +53,6 @@ void mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype, ArrayList **list);
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 void add_file_stat(char *filename, char *path, int ftype);
-char *get_file_mode(mode_t mode);
 void list_files(void);
 void show_file_content(void);
 void edit_file(void);
@@ -460,7 +459,7 @@ void show_help(void)
 			"\n\n?: show help\nq: exit with last dir written to file\n"
 			"ctrl+c exit without writing last dir"
 			"\nPress any key to continue"
-		   );
+	);
 	wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
 	readch();
 }
@@ -516,8 +515,7 @@ void change_dir(const char *buf, int selection, int ftype)
  */
 void mkdir_p(const char *destdir)
 {
-	char *path = memalloc(PATH_MAX);
-	char dir_path[PATH_MAX] = "";
+	char path[PATH_MAX], dir_path[PATH_MAX];
 
 	if (destdir[0] == '~') {
 		char *home = getenv("HOME");
@@ -549,13 +547,10 @@ void mkdir_p(const char *destdir)
 			}
 
 			wpprintw("mkdir failed: %s", strerror(errno));
-			free(path);
 			return;
 		}
 		token = strtok(NULL, "/");
 	}
-
-	free(path);
 	return;
 }
 
@@ -683,7 +678,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 
 	/* get last modified time */
 	size_t time_size = 17;
-	char *time = memalloc(time_size);
+	char time[time_size];
 	/* Format last modified time to a string */
 	strftime(time, time_size, "%Y-%m-%d %H:%M", localtime(&file_stat.st_mtime));
 
@@ -700,10 +695,10 @@ void add_file_stat(char *filename, char *path, int ftype)
 		}
 	}
 	/* 4 before decimal + 1 dot + decimal_place (after decimal) +
-	   unit length (1 for K, 3 for KiB, taking units[1] as B never changes) + 1 space + 1 null */
+	 * unit length (1 for K, 3 for KiB, taking units[1] as B never changes) + 1 space + 1 null */
 	static const char* units[] = {"B", "K", "M", "G", "T", "P"};
 	int size_size = 4 + 1 + decimal_place + strlen(units[1]) + 1 + 1;
-	char *size = memalloc(size_size);
+	char size[size_size];
 	int unit = 0;
 	while (bytes > 1024) {
 		bytes /= 1024;
@@ -716,7 +711,19 @@ void add_file_stat(char *filename, char *path, int ftype)
 		sprintf(size, "%.*f%s", decimal_place, bytes, units[unit]);
 	}
 	/* get file mode string */
-	char *mode_str = get_file_mode(file_stat.st_mode);
+	char mode_str[11];
+	mode_str[0] = S_ISDIR(file_stat.st_mode) ? 'd' : '-';
+	mode_str[1] = (file_stat.st_mode & S_IRUSR) ? 'r' : '-';
+	mode_str[2] = (file_stat.st_mode & S_IWUSR) ? 'w' : '-';
+	mode_str[3] = (file_stat.st_mode & S_IXUSR) ? 'x' : '-';
+	mode_str[4] = (file_stat.st_mode & S_IRGRP) ? 'r' : '-';
+	mode_str[5] = (file_stat.st_mode & S_IWGRP) ? 'w' : '-';
+	mode_str[6] = (file_stat.st_mode & S_IXGRP) ? 'x' : '-';
+	mode_str[7] = (file_stat.st_mode & S_IROTH) ? 'r' : '-';
+	mode_str[8] = (file_stat.st_mode & S_IWOTH) ? 'w' : '-';
+	mode_str[9] = (file_stat.st_mode & S_IXOTH) ? 'x' : '-';
+	mode_str[10] = '\0';
+
 	if (mode_str[0] == '-' && (mode_str[3] == 'x' || mode_str[6] == 'x' || mode_str[9] == 'x')) {
 		color = EXE_COLOR;
 	}
@@ -731,31 +738,6 @@ void add_file_stat(char *filename, char *path, int ftype)
 		arraylist_add(tmp1, filename, path, total_stat, type, icon_str, color, 0, 0);
 	else
 		arraylist_add(tmp2, filename, path, total_stat, type, icon_str, color, 0, 0);
-
-	free(time);
-	free(size);
-	free(mode_str);
-}
-
-/*
- * get file mode string from stat mode
- * eg: drwxr-sr-x
- */
-char *get_file_mode(mode_t mode)
-{
-	char *mode_str = memalloc(11);
-	mode_str[0] = S_ISDIR(mode) ? 'd' : '-';
-	mode_str[1] = (mode & S_IRUSR) ? 'r' : '-';
-	mode_str[2] = (mode & S_IWUSR) ? 'w' : '-';
-	mode_str[3] = (mode & S_IXUSR) ? 'x' : '-';
-	mode_str[4] = (mode & S_IRGRP) ? 'r' : '-';
-	mode_str[5] = (mode & S_IWGRP) ? 'w' : '-';
-	mode_str[6] = (mode & S_IXGRP) ? 'x' : '-';
-	mode_str[7] = (mode & S_IROTH) ? 'r' : '-';
-	mode_str[8] = (mode & S_IWOTH) ? 'w' : '-';
-	mode_str[9] = (mode & S_IXOTH) ? 'x' : '-';
-	mode_str[10] = '\0';
-	return mode_str;
 }
 
 /*
@@ -806,7 +788,7 @@ void list_files(void)
 
 				snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
 				wpprintw("(%ld/%ld) %s %s", sel_file + 1, files->length, selected, cwd);
-			} else  {
+			} else {
 				wpprintw("(%ld/%ld) %s", sel_file + 1, files->length, cwd);
 			}
 		}
