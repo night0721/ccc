@@ -624,7 +624,7 @@ void add_file_stat(char *filename, char *path, int ftype)
 	}
 
 	int type;
-	char *icon_str = memalloc(8);
+	char icon_str[5];
 
 	filename[strlen(filename)] = '\0';
 	/* handle file without extension
@@ -639,14 +639,14 @@ void add_file_stat(char *filename, char *path, int ftype)
 	if (!ext_icon)
 		memcpy(icon_str, "", 4);
 	else 
-		memcpy(icon_str, ext_icon->icon, 5);
+		memcpy(icon_str, ext_icon->icon, 4);
 
 	int color = DEF_COLOR;
 
 	if (S_ISDIR(file_stat.st_mode)) {
 		type = DRY; /* dir */
 		color = DIR_COLOR;
-		memcpy(icon_str, "󰉋", 5);
+		memcpy(icon_str, "󰉋", 4);
 	} else if (S_ISREG(file_stat.st_mode)) {
 		type = REG; /* regular file */
 		color = REG_COLOR;
@@ -723,16 +723,16 @@ void add_file_stat(char *filename, char *path, int ftype)
 	mode_str[7] = (file_stat.st_mode & S_IROTH) ? 'r' : '-';
 	mode_str[8] = (file_stat.st_mode & S_IWOTH) ? 'w' : '-';
 	mode_str[9] = (file_stat.st_mode & S_IXOTH) ? 'x' : '-';
-	mode_str[10] = '\0';
+	mode_str[10] = 0;
 
 	if (mode_str[0] == '-' && (mode_str[3] == 'x' || mode_str[6] == 'x' || mode_str[9] == 'x')) {
 		color = EXE_COLOR;
 	}
 
-	/* mode_str(11) + time(17) + size_size + 2 spaces + 1 null */
-	size_t stat_size = 11 + time_size + size_size + 3;
+	/*				   mode_str + time(17) + size_size + 2 spaces + 1 null */
+	size_t stat_size = 11 + 17 + size_size + 3;
 	char *total_stat = memalloc(stat_size);
-	snprintf(total_stat, stat_size, "%s %s %-*s", mode_str, time, size_size, size);
+	sprintf(total_stat, "%s %s %-*s", mode_str, time, size_size, size);
 
 	/* DIR if color is blue */
 	if (color == 34)
@@ -799,8 +799,8 @@ void list_files(void)
 		/* check is file marked for action */
 		int is_marked = arraylist_search(marked, files->items[i].path, 0) != -1;
 		move_cursor(i + 1, 1);
-		if (is_marked) color = 32;
-		bprintf("\033[30m\033[%dm%s\033[0m\n",
+		if (is_marked) color = MAR_COLOR;
+		bprintf("\033[30m\033[%dm%s\033[m\n",
 				is_selected ? color + 10 : color, line);
 
 		free(line);

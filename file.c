@@ -23,8 +23,6 @@ void arraylist_free(ArrayList *list)
 			free(list->items[i].path);
 		if (list->items[i].stats != NULL)
 			free(list->items[i].stats);
-		if (list->items[i].icon != NULL)
-			free(list->items[i].icon);
 	}
 
 	free(list->items);
@@ -72,7 +70,8 @@ void arraylist_remove(ArrayList *list, long index)
  */
 void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, int marked, int force)
 {
-	file new_file = { name, path, type, stats, icon, color };
+	file new_file = { name, path, type, stats, color };
+	strcpy(new_file.icon, icon);
 
 	if (list->capacity != list->length) {
 		if (marked) {
@@ -106,26 +105,27 @@ void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int typ
  */
 char *get_line(ArrayList *list, long index, int detail, int icons)
 {
-	file file = list->items[index];
+	file f = list->items[index];
 
-	size_t name_len = strlen(file.name);
-	size_t length;
+	size_t length = strlen(f.name) + 1;
 	if (detail) {
-		length = name_len + strlen(file.stats) + 7;   /* 4 for icon, 2 for space and 1 for null */
-	} else {
-		length = name_len + 6;   /* 4 for icon, 1 for space and 1 for null */
+		length += strlen(f.stats) + 1; /* 1 for space */
+	}
+	if (icons) {
+		length += 5; /* 4 for icon, 1 for space */
 	}
 
 	char *line = memalloc(length);
+	line[0] = '\0';
 	if (detail) {
-		strcat(line, file.stats);
+		strcat(line, f.stats);
 		strcat(line, " ");
 	}
 	if (icons) {
-		strcat(line, file.icon);
+		strcat(line, f.icon);
 		strcat(line, " ");
 	}
-	strcat(line, file.name);
- 
+	strcat(line, f.name);
+	line[length] = '\0';
 	return line;
 }

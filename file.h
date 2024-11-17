@@ -18,8 +18,8 @@ typedef struct {
 	char *path; /* absolute path */
 	int type;
 	char *stats;
-	char *icon;
 	int color;
+	char icon[5];
 } file;
 
 typedef struct {
