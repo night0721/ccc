@@ -61,6 +61,7 @@ A: show directory disk usage/block size
 i: toggle file details
 u: sort files
 x: view file/dir attributes
+e: show history
 y: copy filename to clipboard
 !: open shell in current dir
 
@@ -82,8 +83,6 @@ o: open file with
 O: open file with a GUI program detached from file manager
 
 /: search
-
-e: show history
 
 c: copy
 m: move

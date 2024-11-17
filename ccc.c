@@ -70,6 +70,7 @@ void delete_files(void);
 void start_shell(void);
 void yank_clipboard(void);
 void view_file_attr(void);
+void show_history(void);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
 int readch(void);
@@ -367,6 +368,10 @@ int main(int argc, char **argv)
 				view_file_attr();
 				break;
 
+			case 'e':
+				show_history();
+				break;
+
 			/* mark one file */
 			case SPACE:
 				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
@@ -502,6 +507,12 @@ void change_dir(const char *buf, int selection, int ftype)
 		strcpy(tmp, buf);
 		strcpy(p_cwd, cwd);
 		strcpy(cwd, tmp);
+		char history_path[PATH_MAX];
+		strcpy(history_path, "~/.cache/ccc/history");
+		replace_home(history_path);
+		FILE *history_file = fopen(history_path, "a");
+		fprintf(history_file, "%s\n", cwd);
+		fclose(history_file);
 	}
 	if (ftype == 0)
 		arraylist_free(files);
@@ -1269,6 +1280,25 @@ void view_file_attr(void)
 		/* Fork failed */
 		wpprintw("fork failed: %s", strerror(errno));
 	}
+	readch();
+}
+
+void show_history(void)
+{
+	bprintf("\033[2J");
+	move_cursor(1, 1);
+	char history_path[PATH_MAX];
+	strcpy(history_path, "~/.cache/ccc/history");
+	replace_home(history_path);
+	FILE *history_file = fopen(history_path, "r");
+	char buffer[PATH_MAX];
+	int row = 1;
+	while (fgets(buffer, sizeof(buffer), history_file) && row <= rows - 1) {
+		move_cursor(row++, 1);
+		bprintf(buffer);
+
+	}
+	fclose(history_file);
 	readch();
 }
 

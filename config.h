@@ -13,6 +13,7 @@ enum files_colors {
 	FIF_COLOR = 35, /* FIFO */
 	DEF_COLOR = 37, /* Default */
 	EXE_COLOR = 32, /* Executable file */
+	MAR_COLOR = 36, /* Marked files */
 };
 
 /* Set width offset for windows:
