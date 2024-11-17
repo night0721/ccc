@@ -289,6 +289,7 @@ int main(int argc, char **argv)
 				char *trash_dir = check_trash_dir();
 				if (trash_dir) {
 					change_dir(trash_dir, 0, 0);
+					free(trash_dir);
 				}
 				break;
 
@@ -784,7 +785,7 @@ void list_files(void)
 			if (num_marked > 0) {
 				/* Determine length of formatted string */
 				int m_len = snprintf(NULL, 0, "[%ld] selected", num_marked);
-				char *selected = memalloc(m_len + 1);
+				char selected[m_len + 1];
 
 				snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
 				wpprintw("(%ld/%ld) %s %s", sel_file + 1, files->length, selected, cwd);
@@ -1162,8 +1163,9 @@ void create_dir(void)
 	if (!input) {
 		return;
 	}
-	char *newfilename = memalloc(PATH_MAX);
+	char newfilename[PATH_MAX];
 	snprintf(newfilename, PATH_MAX, "%s/%s", cwd, input);
+
 	if (access(newfilename, F_OK) != 0) {
 		mkdir_p(newfilename);
 		change_dir(cwd, 0, 0);
@@ -1172,7 +1174,6 @@ void create_dir(void)
 		wpprintw("Directory already exist");
 	}
 	free(input);
-	free(newfilename);
 }
 
 void create_file(void)
@@ -1194,7 +1195,7 @@ void delete_files(void)
 		char *trash_dir = check_trash_dir();
 		if (trash_dir) {
 			for (int i = 0; i < marked->length; i++) {
-				char *new_path = memalloc(PATH_MAX);
+				char new_path[PATH_MAX];
 				snprintf(new_path, PATH_MAX, "%s/%s", trash_dir, marked->items[i].name);
 				if (rename(marked->items[i].path, new_path)) {
 					wpprintw("delete failed: %s", strerror(errno));
