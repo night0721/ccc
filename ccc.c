@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 				/* get parent directory */
 				strcpy(p_cwd, cwd);
 				char *last_slash = strrchr(cwd, '/');
-				if (last_slash != NULL) {
+				if (last_slash) {
 					if (last_slash == cwd) {
 						change_dir("/", 0, 0);
 						break;
@@ -279,8 +279,9 @@ int main(int argc, char **argv)
 			/* '~' go to $HOME */
 			case TILDE:;
 				char *home = getenv("HOME");
-				if (home == NULL) {
-					wpprintw("$HOME not defined");
+				if (!home) {
+					wpprintw("$HOME not defined (Press any key to continue)");
+					readch();
 				} else {
 					strcpy(p_cwd, cwd);
 					change_dir(home, 0, 0);
@@ -290,7 +291,7 @@ int main(int argc, char **argv)
 			/* go to the trash dir */
 			case 't':;
 				char *trash_dir = check_trash_dir();
-				if (trash_dir != NULL) {
+				if (trash_dir) {
 					strcpy(p_cwd, cwd);
 					change_dir(trash_dir, 0, 0);
 				}
@@ -432,7 +433,7 @@ void handle_sigwinch(int ignore)
 
 void cleanup(void)
 {
-	if (argv_cp != NULL)
+	if (argv_cp)
 		free(argv_cp);
 	if (files->length != 0) {
 		arraylist_free(files);
@@ -519,7 +520,7 @@ void mkdir_p(const char *destdir)
 
 	if (destdir[0] == '~') {
 		char *home = getenv("HOME");
-		if (home == NULL) {
+		if (!home) {
 			wpprintw("$HOME not defined");
 			return;
 		}
@@ -534,7 +535,7 @@ void mkdir_p(const char *destdir)
 		dir_path[0] = '/';
 
 	char *token = strtok(path, "/");
-	while (token != NULL) {
+	while (token) {
 		strcat(dir_path, token);
 		strcat(dir_path, "/");
 
@@ -566,13 +567,13 @@ void populate_files(const char *path, int ftype, ArrayList **list)
 	DIR *dp;
 	struct dirent *ep;
 
-	if ((dp = opendir(path)) != NULL) {
+	if ((dp = opendir(path))) {
 		if (ftype == 0) {
 			tmp1 = arraylist_init(10);
 			tmp2 = arraylist_init(10);
 		}
 
-		while ((ep = readdir(dp)) != NULL) {
+		while ((ep = readdir(dp))) {
 			char *filename = estrdup(ep->d_name);
 
 			/* Filter out dotfiles */
@@ -633,12 +634,12 @@ void add_file_stat(char *filename, char *path, int ftype)
 	 * ext is the extension if . exist in filename
 	 * otherwise is nothing and handled through tenery operator */
 	char *ext = strrchr(filename, '.');
-	if (ext != NULL) {
+	if (ext) {
 		ext += 1;
 	}
 	/* add file extension */
-	icon *ext_icon = hashtable_search(ext != NULL ? ext : filename);
-	if (ext_icon == NULL)
+	icon *ext_icon = hashtable_search(ext ? ext : filename);
+	if (!ext_icon)
 		memcpy(icon_str, "", 4);
 	else 
 		memcpy(icon_str, ext_icon->icon, 5);
@@ -889,7 +890,7 @@ void show_file_content(void)
 		return;
 	}
 	FILE *file = fopen(current_file.path, "r");
-	if (file == NULL) {
+	if (!file) {
 		bprintf("Unable to read %s", current_file.name);
 		return;
 	}
@@ -923,7 +924,7 @@ void show_file_content(void)
 		char buffer[4096];
 		int row = 1;
 		FILE *stream = fdopen(pipe_fd[0], "r");
-		while (fgets(buffer, sizeof(buffer), stream) != NULL && row <= rows - 1) {
+		while (fgets(buffer, sizeof(buffer), stream) && row <= rows - 1) {
 			buffer[strcspn(buffer, "\n")] = 0;
 
 			if (buffer[0] == '\0' || strspn(buffer, " \t") == strlen(buffer)) {
@@ -986,9 +987,9 @@ void show_file_content(void)
  */
 void edit_file(void)
 {
-	if (editor == NULL) {
+	if (!strcmp(editor, "")) {
 		editor = getenv("EDITOR");
-		if (editor == NULL) {
+		if (!editor) {
 			wpprintw("$EDITOR not defined");
 			return;
 		}
@@ -1031,7 +1032,7 @@ void toggle_executable(void)
 void replace_home(char *str)
 {
 	char *home = getenv("HOME");
-	if (home == NULL) {
+	if (!home) {
 		wpprintw("$HOME not defined");
 		return;
 	}
@@ -1058,12 +1059,12 @@ int write_last_d(void)
 		strcpy(last_ddup, last_d);
 
 		char *last_d_dir = strrchr(last_ddup, '/');
-		if (last_d_dir != NULL) {
+		if (last_d_dir) {
 			*last_d_dir = '\0'; /* truncate string */
 		}
 		mkdir_p(last_ddup);
 		FILE *last_d_file = fopen(last_d, "w");
-		if (last_d_file == NULL) {
+		if (!last_d_file) {
 			wpprintw("Cannot open last directory file (Press any key to continue)");
 			return -1;
 		}
@@ -1132,7 +1133,8 @@ void rename_file(void)
 	if (!input) {
 		return;
 	}
-	char *newfilename = estrdup(filename);
+	char newfilename[PATH_MAX];
+	strcpy(newfilename, filename);
 	/* remove basename of newfilename */
 	char *last_slash = strrchr(newfilename, '/');
 	*last_slash = '\0';
@@ -1147,12 +1149,14 @@ void rename_file(void)
 		wpprintw("Renamed %s to %s", filename, newfilename);
 	}
 	free(input);
-	free(newfilename);
 }
 
 void goto_dir(void)
 {
 	char *input = get_panel_string("Goto dir: ");
+	if (!input) {
+		return;
+	}
 	struct stat st;
 	if (lstat(input, &st)) {
 		wpprintw("lstat failed: %s (Press any key to continue)", strerror(errno));
@@ -1171,6 +1175,9 @@ void goto_dir(void)
 void create_dir(void)
 {
 	char *input = get_panel_string("New dir: ");
+	if (!input) {
+		return;
+	}
 	char *newfilename = memalloc(PATH_MAX);
 	snprintf(newfilename, PATH_MAX, "%s/%s", cwd, input);
 	if (access(newfilename, F_OK) != 0) {
@@ -1187,6 +1194,9 @@ void create_dir(void)
 void create_file(void)
 {
 	char *input = get_panel_string("New file: ");
+	if (!input) {
+		return;
+	}
 	FILE *f = fopen(input, "w+");
 	fclose(f);
 	change_dir(cwd, 0, 0);
@@ -1198,7 +1208,7 @@ void delete_files(void)
 {
 	if (marked->length) {
 		char *trash_dir = check_trash_dir();
-		if (trash_dir != NULL) {
+		if (trash_dir) {
 			for (int i = 0; i < marked->length; i++) {
 				char *new_path = memalloc(PATH_MAX);
 				snprintf(new_path, PATH_MAX, "%s/%s", trash_dir, marked->items[i].name);
