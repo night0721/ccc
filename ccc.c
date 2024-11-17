@@ -82,9 +82,9 @@ unsigned int focus = 0;
 long sel_file = 0;
 int file_picker = 1;
 int to_open_file = 0;
-char *argv_cp;
-char cwd[4096];
-char p_cwd[4096]; /* previous cwd */
+char argv_cp[PATH_MAX];
+char cwd[PATH_MAX];
+char p_cwd[PATH_MAX]; /* previous cwd */
 int half_width;
 ArrayList *files;
 ArrayList *marked;
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 			perror("ccc");
 			die("Error from chdir");
 		} else if (S_ISREG(st.st_mode)) {
-			argv_cp = estrdup(argv[1]);
+			strcpy(argv_cp, argv[1]);
 			char *last_slash = strrchr(argv_cp, '/');
 			if (last_slash) {
 				*last_slash = '\0';
@@ -432,8 +432,6 @@ void handle_sigwinch(int ignore)
 
 void cleanup(void)
 {
-	if (argv_cp)
-		free(argv_cp);
 	if (files->length != 0) {
 		arraylist_free(files);
 	}
