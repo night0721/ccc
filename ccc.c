@@ -68,6 +68,7 @@ void goto_dir(void);
 void create_dir(void);
 void create_file(void);
 void delete_files(void);
+void start_shell(void);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
 int read_key(void);
@@ -372,6 +373,7 @@ int main(int argc, char **argv)
 				break;
 
 			case '!':
+				start_shell();
 				break;
 
 			/* mark one file */
@@ -1213,6 +1215,32 @@ void delete_files(void)
 			}
 		} else {
 			wpprintw("TODO: implement hard delete");
+		}
+	}
+}
+
+void start_shell(void)
+{
+	bprintf("\033[2J\033[?25h");
+	move_cursor(1, 1);
+	char shell[PATH_MAX];
+	strcpy(shell, getenv("SHELL"));
+	if (strlen(shell) == 0) {
+		strcpy(shell, "sh");
+	} else {
+		pid_t pid = fork();
+		if (pid == 0) {
+			/* Child process */
+			execlp(shell, shell, NULL);
+			_exit(1); /* Exit if exec fails */
+		} else if (pid > 0) {
+			/* Parent process */
+			waitpid(pid, NULL, 0);
+			list_files();
+			bprintf("\033[?25l");
+		} else {
+			/* Fork failed */
+			wpprintw("fork failed: %s", strerror(errno));
 		}
 	}
 }
