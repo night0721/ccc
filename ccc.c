@@ -69,9 +69,10 @@ void create_dir(void);
 void create_file(void);
 void delete_files(void);
 void start_shell(void);
+void yank_clipboard(void);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
-int read_key(void);
+int readch(void);
 int get_window_size(int *row, int *col);
 void bprintf(const char *fmt, ...);
 
@@ -168,19 +169,18 @@ int main(int argc, char **argv)
 
 	if (to_open_file) {
 		sel_file = arraylist_search(files, argv_cp, 1);
-		list_files();
 	}
 
-	int ch, ch2;
-	int run = 1;
+	int ch, run = 1;
 	while (run) {
-		ch = read_key();
+		list_files();
+		ch = readch();
 		switch (ch) {
 			/* quit */
 			case 'q':
 				if (write_last_d() == -1) {
 					/* prompt user so error message can be shown to user */
-					read_key();
+					readch();
 				}
 				cleanup();
 				run = 0;
@@ -242,8 +242,6 @@ int main(int argc, char **argv)
 					sel_file -= jump_num;
 				else
 					sel_file = 0;
-
-				list_files();
 				break;
 
 			/* go up */
@@ -251,8 +249,6 @@ int main(int argc, char **argv)
 			case 'k':
 				if (sel_file > 0)
 					sel_file--;
-
-				list_files();
 				break;
 
 			/* jump down */
@@ -261,8 +257,6 @@ int main(int argc, char **argv)
 					sel_file += jump_num;
 				else
 					sel_file = (files->length - 1);
-
-				list_files();
 				break;
 
 			/* go down */
@@ -270,20 +264,16 @@ int main(int argc, char **argv)
 			case 'j':
 				if (sel_file < (files->length - 1))
 					sel_file++;
-
-				list_files();
 				break;
 
 			/* jump to the bottom */
 			case 'G':
 				sel_file = (files->length - 1);
-				list_files();
 				break;
 
 			/* jump to the top */
 			case 'g':
 				sel_file = 0;
-				list_files();
 				break;
 
 			/* '~' go to $HOME */
@@ -292,6 +282,7 @@ int main(int argc, char **argv)
 				if (home == NULL) {
 					wpprintw("$HOME not defined");
 				} else {
+					strcpy(p_cwd, cwd);
 					change_dir(home, 0, 0);
 				}
 				break;
@@ -369,10 +360,13 @@ int main(int argc, char **argv)
 				start_shell();
 				break;
 
+			case 'y':
+				yank_clipboard();
+				break;
+
 			/* mark one file */
 			case SPACE:
 				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
-				list_files();
 				break;
 
 			/* mark all files in directory */
@@ -464,8 +458,10 @@ void show_help(void)
 			"r: rename\n\nspace: mark file\na: mark all files in directory\nd: trash"
 			"\n\n?: show help\nq: exit with last dir written to file\n"
 			"ctrl+c exit without writing last dir"
+			"\nPress any key to continue"
 		   );
 	wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
+	readch();
 }
 
 /*
@@ -600,8 +596,6 @@ void populate_files(const char *path, int ftype, ArrayList **list)
 			free(tmp2);
 		}
 		closedir(dp);
-		if (list == &files)
-			list_files();
 	} else {
 		wpprintw("stat failed: %s", strerror(errno));
 	}
@@ -1005,7 +999,6 @@ void edit_file(void)
 		} else if (pid > 0) {
 			/* Parent process */
 			waitpid(pid, NULL, 0);
-			list_files();
 		} else {
 			/* Fork failed */
 			wpprintw("fork failed: %s", strerror(errno));
@@ -1048,7 +1041,7 @@ int write_last_d(void)
 	if (!strcmp(last_d, "")) {
 		strcpy(last_d, getenv("CCC_LAST_D"));
 		if (!strcmp(last_d, "")) {
-			wpprintw("$CCC_LAST_D not defined (Press enter to continue)");
+			wpprintw("$CCC_LAST_D not defined (Press any key to continue)");
 			return -1;
 		}
 	} else {
@@ -1065,7 +1058,7 @@ int write_last_d(void)
 		mkdir_p(last_ddup);
 		FILE *last_d_file = fopen(last_d, "w");
 		if (last_d_file == NULL) {
-			wpprintw("Cannot open last directory file (Press enter to continue)");
+			wpprintw("Cannot open last directory file (Press any key to continue)");
 			return -1;
 		}
 		fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
@@ -1082,7 +1075,6 @@ int sort_compare(const void *a, const void *b)
 void sort_files(void)
 {
 	qsort(files->items, files->length, sizeof(file), sort_compare);
-	list_files();
 }
 
 char *get_panel_string(char *prompt)
@@ -1091,9 +1083,10 @@ char *get_panel_string(char *prompt)
 	char *buf = memalloc(bufsize);
 	size_t buflen = 0;
 	buf[0] = '\0';
+	bprintf("\033[?25h");
 	while (1) {
-		wpprintw(prompt);
-		int c = read_key();
+		wpprintw("%s%s", prompt, buf);
+		int c = readch();
 		if (c == BACKSPACE) {
 			if (buflen != 0) {
 				buf[--buflen] = '\0';
@@ -1101,10 +1094,12 @@ char *get_panel_string(char *prompt)
 		} else if (c == '\033') {
 			wpprintw("");
 			free(buf);
+			bprintf("\033[?25l");
 			return NULL;
 		} else if (c == '\r') {
 			wpprintw("");
 			if (buflen != 0) {
+				bprintf("\033[?25l");
 				return buf;
 			}
 		} else if (!iscntrl(c) && c < 128) {
@@ -1120,6 +1115,7 @@ char *get_panel_string(char *prompt)
 	if (buf[0] == '~')
 		replace_home(buf);
 
+	bprintf("\033[?25l");
 	return buf;
 }
 
@@ -1127,6 +1123,9 @@ void rename_file(void)
 {
 	char *filename = files->items[sel_file].path;
 	char *input = get_panel_string("Rename file: ");
+	if (!input) {
+		return;
+	}
 	char *newfilename = estrdup(filename);
 	/* remove basename of newfilename */
 	char *last_slash = strrchr(newfilename, '/');
@@ -1135,8 +1134,8 @@ void rename_file(void)
 	strcat(newfilename, "/");
 	strcat(newfilename, input);
 	if (rename(filename, newfilename)) {
-		wpprintw("rename failed: %s (Press enter to continue)", strerror(errno));
-		read_key();
+		wpprintw("rename failed: %s (Press any key to continue)", strerror(errno));
+		readch();
 	} else {
 		change_dir(cwd, 0, 0);
 		wpprintw("Renamed %s to %s", filename, newfilename);
@@ -1150,13 +1149,13 @@ void goto_dir(void)
 	char *input = get_panel_string("Goto dir: ");
 	struct stat st;
 	if (lstat(input, &st)) {
-		wpprintw("lstat failed: %s (Press enter to continue)", strerror(errno));
-		read_key();
+		wpprintw("lstat failed: %s (Press any key to continue)", strerror(errno));
+		readch();
 	}
 	/* chdir to directory from argument */
 	if (S_ISDIR(st.st_mode) && chdir(input)) {
-		wpprintw("chdir failed: %s (Press enter to continue)", strerror(errno));
-		read_key();
+		wpprintw("chdir failed: %s (Press any key to continue)", strerror(errno));
+		readch();
 	}
 	getcwd(cwd, PATH_MAX);
 	change_dir(cwd, 0, 0);
@@ -1229,12 +1228,28 @@ void start_shell(void)
 		} else if (pid > 0) {
 			/* Parent process */
 			waitpid(pid, NULL, 0);
-			list_files();
 			bprintf("\033[?25l");
 		} else {
 			/* Fork failed */
 			wpprintw("fork failed: %s", strerror(errno));
 		}
+	}
+}
+
+void yank_clipboard(void)
+{
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child process */
+		execlp(clipboard, clipboard, files->items[sel_file].name, NULL);
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+		bprintf("\033[?25l");
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
 	}
 }
 
@@ -1260,7 +1275,7 @@ void move_cursor(int row, int col)
 	bprintf("\033[%d;%dH", row, col);
 }
 
-int read_key(void)
+int readch(void)
 {
 	int nread;
 	char c;
