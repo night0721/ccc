@@ -117,16 +117,13 @@ char *get_line(ArrayList *list, long index, int detail, int icons)
 	}
 
 	char *line = memalloc(length);
-	line[0] = '\0';
 	if (detail) {
 		strcat(line, file.stats);
 		strcat(line, " ");
 	}
 	if (icons) {
-		char *tmp = memalloc(10);
-		snprintf(tmp, 10, "%s ", file.icon);
-		strcat(line, tmp);
-		free(tmp);
+		strcat(line, file.icon);
+		strcat(line, " ");
 	}
 	strcat(line, file.name);
  

@@ -1199,10 +1199,9 @@ void delete_files(void)
 				snprintf(new_path, PATH_MAX, "%s/%s", trash_dir, marked->items[i].name);
 				if (rename(marked->items[i].path, new_path)) {
 					wpprintw("delete failed: %s", strerror(errno));
-				} else {
-					change_dir(cwd, 0, 0);
 				}
 			}
+			change_dir(cwd, 0, 0);
 			for (int i = 0; i < marked->length; i++) {
 				arraylist_remove(marked, 0);
 			}
