@@ -66,5 +66,38 @@ ctrl+c exit without writing last dir
 .nf
 
 Various settings can be changed in config.h file located in the program's directory.
+
+.
+.fi
+.
+.SH "CD on Exit for POSIX Shell"
+.
+.nf
+
+# Add this to your .bashrc, .zshrc or equivalent.
+# Run 'ccc' with 'c' or whatever you decide to name the function.
+c() {
+    ccc "$@"
+    cd "$(cat "${XDG_CACHE_HOME:=${HOME}/.cache}/ccc/.ccc_d")"
+}
+
+.
+.fi
+.
+.SH "Environment variables"
+.
+.nf
+
+export CCC_LAST_D=~/.cache/ccc/.ccc_d
+export CCC_FAV1=~/projects
+export CCC_FAV2=~/.bashrc
+export CCC_FAV3=~/Pictures/Wallpapers/
+export CCC_FAV4=/usr/share
+export CCC_FAV5=/
+export CCC_FAV6=
+export CCC_FAV7=
+export CCC_FAV8=
+export CCC_FAV9=
+
 .
 .fi

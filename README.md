@@ -74,6 +74,8 @@ space: mark file
 a: mark all files in directory
 d: trash
 
+[1-9]: favourites/bookmarks (see customizing)
+
 ?: show help
 q: exit with last dir written to file
 ctrl+c exit without writing last dir
@@ -91,7 +93,6 @@ b: bulk rename
 
 p: execute paste/move/delete/bulk_rename
 
-[1-9]: favourites/bookmarks (see customization)
 ```
 
 # Dependencies
@@ -114,6 +115,19 @@ c() {
     ccc "$@"
     cd "$(cat "${XDG_CACHE_HOME:=${HOME}/.cache}/ccc/.ccc_d")"
 }
+```
+## Environment variables
+```sh
+export CCC_LAST_D=~/.cache/ccc/.ccc_d
+export CCC_FAV1=~/projects
+export CCC_FAV2=~/.bashrc
+export CCC_FAV3=~/Pictures/Wallpapers/
+export CCC_FAV4=/usr/share
+export CCC_FAV5=/
+export CCC_FAV6=
+export CCC_FAV7=
+export CCC_FAV8=
+export CCC_FAV9=
 ```
 ## Using `ccc` in neovim as a file picker
 See [ccc.nvim](https://github.com/night0721/ccc.nvim)

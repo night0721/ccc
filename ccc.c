@@ -372,6 +372,18 @@ int main(int argc, char **argv)
 				show_history();
 				break;
 
+			case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+			case '8': case '9':
+				char envname[9];
+				snprintf(envname, 9, "CCC_FAV%d", ch - '0');
+				char *fav = getenv(envname);
+				if (fav && !strcmp(fav, "")) {
+					char dir[PATH_MAX];
+					strcpy(dir, fav);
+					change_dir(dir, 0, 0);
+				}
+				break;
+
 			/* mark one file */
 			case SPACE:
 				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
