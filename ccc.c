@@ -35,9 +35,11 @@ enum keys {
 	PAGE_UP,
 	PAGE_DOWN,
 };
+
 typedef struct {
 	int key;
 } key;
+
 #define PATH_MAX 4096 /* Max length of path */
 
 #include "config.h"
@@ -366,6 +368,10 @@ int main(int argc, char **argv)
 
 			case 'X':
 				toggle_executable();
+				change_dir(cwd, 0, 0);
+				break;
+
+			case '!':
 				break;
 
 			/* mark one file */
