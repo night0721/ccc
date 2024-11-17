@@ -70,6 +70,7 @@ void create_file(void);
 void delete_files(void);
 void start_shell(void);
 void yank_clipboard(void);
+void view_file_attr(void);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
 int readch(void);
@@ -367,6 +368,9 @@ int main(int argc, char **argv)
 
 			case 'o':
 			case 'O':
+			case 'x':
+				view_file_attr();
+				break;
 
 			/* mark one file */
 			case SPACE:
@@ -1267,6 +1271,25 @@ void yank_clipboard(void)
 		/* Fork failed */
 		wpprintw("fork failed: %s", strerror(errno));
 	}
+}
+
+void view_file_attr(void)
+{
+	bprintf("\033[2J");
+	move_cursor(1, 1);
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child process */
+		execlp("stat", "stat", files->items[sel_file].name, NULL);
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
+	}
+	readch();
 }
 
 /*
