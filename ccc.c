@@ -282,15 +282,8 @@ int main(int argc, char **argv)
 
 			/* jump to the top */
 			case 'g':
-				ch2 = read_key();
-				switch (ch2) {
-					case 'g':
-						sel_file = 0;
-						list_files();
-						break;
-					default:
-						break;
-				}
+				sel_file = 0;
+				list_files();
 				break;
 
 			/* '~' go to $HOME */

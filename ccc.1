@@ -1,11 +1,11 @@
 .
 .TH CCC "1" "March 2024" "ccc" "User Commands"
 .SH NAME
-ccc \- Fast TUI file manager written in C, using ncurses.
+ccc \- Fast, small, hackable TUI file manager with no dependency
 .SH SYNOPSIS
 .B ccc
 .SH DESCRIPTION
-ccc is a rewrite of fff file manager in C aiming for usefulness and speed. The fact that it is written in C makes it more versatile and rapid, enabling us to add features that were previously ruled out due to time complexity. You may call it a soft fork.
+Soft fork of fff in C aiming for size and speed with no dependency, hackable with patches and configurable
 .PP
 .SH "Usage"
 .
@@ -16,15 +16,15 @@ j: scroll down
 k: scroll up
 l: go to child dir
 
-left: go to parent dir
-down: scroll down
-up: scroll up
+left:  go to parent dir
+down:  scroll down
+up:    scroll up
 right: go to child dir
 
 enter: go to child dir/open file
 backspace: go to parent dir
 
-gg: go to top
+g: go to top
 G: go to bottom
 
 ctrl+u: jump up
@@ -34,13 +34,19 @@ t: go to trash dir
 ~: go to home dir
 -: go to previous dir
 z: refresh current dir
+:: go to a directory by typing
+u: sort files
 
+.: toggle hidden files
 i: toggle file details
 X: toggle executable
+!: open shell in current dir
 
 A: show directory disk usage/block size
 
 f: new file
+n: new dir
+r: rename
 
 space: mark file
 a: mark all files in directory

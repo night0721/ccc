@@ -44,7 +44,7 @@ right: go to child dir
 enter: go to child dir/open file
 backspace: go to parent dir
 
-gg: go to top
+g: go to top
 G: go to bottom
 
 ctrl+u: jump up
@@ -60,6 +60,7 @@ u: sort files
 .: toggle hidden files
 i: toggle file details
 X: toggle executable
+!: open shell in current dir
 
 A: show directory disk usage/block size
 
@@ -80,7 +81,6 @@ o: open file with
 O: open file with a GUI program detached from file manager
 
 /: search
-!: open shell in current dir
 
 x: view file/dir attributes
 e: show history
