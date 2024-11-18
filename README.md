@@ -44,6 +44,9 @@ right: go to child dir
 enter: go to child dir/open file
 backspace: go to parent dir
 
+o: open file with
+O: open file with a GUI program detached from file manager
+
 g: go to top
 G: go to bottom
 
@@ -81,9 +84,6 @@ q: exit with last dir written to file
 ctrl+c exit without writing last dir
 
 TO BE DONE:
-o: open file with
-O: open file with a GUI program detached from file manager
-
 /: search
 
 c: copy
