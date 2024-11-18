@@ -17,6 +17,8 @@
 #include "icons.h"
 #include "util.h"
 
+#define LEN(x) (sizeof(x) / sizeof(*(x)))
+
 /* Keybindings */
 enum keys {
 	CTRLD = 0x04,
@@ -36,14 +38,65 @@ enum keys {
 	PAGE_DOWN,
 };
 
+enum action {
+	ACT_QUIT = 1,
+	ACT_RELOAD,
+	ACT_BACK,
+	ACT_ENTER,
+	ACT_JUMP_UP,
+	ACT_JUMP_DOWN,
+	ACT_UP,
+	ACT_DOWN,
+	ACT_BOTTOM,
+	ACT_TOP,
+	ACT_HOME,
+	ACT_TRASH_DIR,
+	ACT_SORT,
+	ACT_SHOW_DIR_SIZE,
+	ACT_PREV_DIR,
+	ACT_SHOW_HELP,
+	ACT_HIDDEN_FILES,
+	ACT_FILE_DETAILS,
+	ACT_SHOW_ICONS,
+	ACT_CREATE_FILE,
+	ACT_CREATE_DIR,
+	ACT_RENAME_FILE,
+	ACT_GOTO_DIR,
+	ACT_TOGGLE_EXE,
+	ACT_START_SHELL,
+	ACT_COPY_FILENAME,
+	ACT_OPEN_FILE,
+	ACT_OPEN_FILE_DETACHED,
+	ACT_VIEW_FILE_ATTR,
+	ACT_SHOW_HIST,
+	ACT_FAV1,
+	ACT_FAV2,
+	ACT_FAV3,
+	ACT_FAV4,
+	ACT_FAV5,
+	ACT_FAV6,
+	ACT_FAV7,
+	ACT_FAV8,
+	ACT_FAV9,
+	ACT_MARK_FILE,
+	ACT_MARK_ALL,
+	ACT_DELETE,
+	ACT_MOVE,
+	ACT_COPY,
+	ACT_SYM_LINK,
+	ACT_BULK_RENAME,
+};
+
 typedef struct {
 	int key;
+	enum action act;
 } key;
 
 #define PATH_MAX 4096 /* Max length of path */
 
 #include "config.h"
 
+int getsel(void);
 void handle_sigwinch(int ignore);
 void cleanup(void);
 void show_help(void);
@@ -82,7 +135,7 @@ void bprintf(const char *fmt, ...);
 /* global variables */
 unsigned int focus = 0;
 long sel_file = 0;
-int file_picker = 1;
+int file_picker = 0;
 int to_open_file = 0;
 char argv_cp[PATH_MAX];
 char cwd[PATH_MAX];
@@ -171,13 +224,13 @@ int main(int argc, char **argv)
 		sel_file = arraylist_search(files, argv_cp, 1);
 	}
 
-	int ch, run = 1;
+	int run = 1;
 	while (run) {
 		list_files();
-		ch = readch();
-		switch (ch) {
+		int sel = getsel();	
+		switch (sel) {
 			/* quit */
-			case 'q':
+			case ACT_QUIT:
 				if (write_last_d() == -1) {
 					/* prompt user so error message can be shown to user */
 					readch();
@@ -187,14 +240,12 @@ int main(int argc, char **argv)
 				break;
 
 			/* reload */
-			case 'z':
+			case ACT_RELOAD:
 				change_dir(cwd, 0, 0); 
 				break;
 
 			/* go back */
-			case BACKSPACE:;
-			case ARROW_LEFT:;
-			case 'h':;
+			case ACT_BACK:;
 				char dir[PATH_MAX];
 				strcpy(dir, cwd);
 				/* get parent directory */
@@ -210,9 +261,7 @@ int main(int argc, char **argv)
 				break;
 
 			/* enter directory/open a file */
-			case ENTER:;
-			case ARROW_RIGHT:;
-			case 'l':;
+			case ACT_ENTER:;
 				file c_file = files->items[sel_file];
 
 				/* Check if it is directory or a regular file */
@@ -237,47 +286,45 @@ int main(int argc, char **argv)
 				break;
 
 			/* jump up */
-			case CTRLU:
+			case ACT_JUMP_UP:
 				if ((sel_file - jump_num) > 0)
 					sel_file -= jump_num;
 				else
 					sel_file = 0;
 				break;
 
-			/* go up */
-			case ARROW_UP:
-			case 'k':
-				if (sel_file > 0)
-					sel_file--;
-				break;
-
 			/* jump down */
-			case CTRLD:
+			case ACT_JUMP_DOWN:
 				if ((sel_file + jump_num) < (files->length - 1))
 					sel_file += jump_num;
 				else
 					sel_file = (files->length - 1);
 				break;
 
+			/* go up */
+			case ACT_UP:
+				if (sel_file > 0)
+					sel_file--;
+				break;
+
 			/* go down */
-			case ARROW_DOWN:
-			case 'j':
+			case ACT_DOWN:
 				if (sel_file < (files->length - 1))
 					sel_file++;
 				break;
 
 			/* jump to the bottom */
-			case 'G':
+			case ACT_BOTTOM:
 				sel_file = (files->length - 1);
 				break;
 
 			/* jump to the top */
-			case 'g':
+			case ACT_TOP:
 				sel_file = 0;
 				break;
 
 			/* '~' go to $HOME */
-			case TILDE:;
+			case ACT_HOME:;
 				char *home = getenv("HOME");
 				if (!home) {
 					wpprintw("$HOME not defined (Press any key to continue)");
@@ -288,7 +335,7 @@ int main(int argc, char **argv)
 				break;
 
 			/* go to the trash dir */
-			case 't':;
+			case ACT_TRASH_DIR:;
 				char *trash_dir = check_trash_dir();
 				if (trash_dir) {
 					change_dir(trash_dir, 0, 0);
@@ -297,92 +344,93 @@ int main(int argc, char **argv)
 				break;
 
 			/* sort files */
-			case 'u':
+			case ACT_SORT:
 				sort_files();
 				break;
 
 			/* show directories' sizes */
-			case 'A':
+			case ACT_SHOW_DIR_SIZE:
 				dirs_size = !dirs_size;
 				change_dir(cwd, 0, 0);
 				break;
 
 			/* go to previous dir */
-			case '-':
+			case ACT_PREV_DIR:
 				if (strlen(p_cwd) != 0)
 					change_dir(p_cwd, 0, 0);
 				break;
 
 			/* show help */
-			case '?':
+			case ACT_SHOW_HELP:
 				show_help();
 				break;
 
 			/* toggle hidden files */
-			case '.':
+			case ACT_HIDDEN_FILES:
 				show_hidden = !show_hidden;
 				change_dir(cwd, 0, 0);
 				break;
 
 			/* toggle file details */
-			case 'i':
+			case ACT_FILE_DETAILS:
 				show_details = !show_details;
 				change_dir(cwd, 0, 0);
 				break;
 
-			case 'w':
+			case ACT_SHOW_ICONS:
 				show_icons = !show_icons;
 				change_dir(cwd, 0, 0);
 				break;
 
-			case 'f':
+			case ACT_CREATE_FILE:
 				create_file();
 				break;
 
-			case 'n':
+			case ACT_CREATE_DIR:
 				create_dir();
 				break;
 
-			case 'r':
+			case ACT_RENAME_FILE:
 				rename_file();
 				break;
 
-			case ':':
+			case ACT_GOTO_DIR:
 				goto_dir();
 				break;
 
-			case 'X':
+			case ACT_TOGGLE_EXE:
 				toggle_executable();
 				change_dir(cwd, 0, 0);
 				break;
 
-			case '!':
+			case ACT_START_SHELL:
 				start_shell();
 				break;
 
-			case 'y':
+			case ACT_COPY_FILENAME:
 				yank_clipboard();
 				break;
 
-			case 'o':
+			case ACT_OPEN_FILE:
 				open_with();
 				break;
-			case 'O':
+
+			case ACT_OPEN_FILE_DETACHED:
 				open_detached();
 				break;
 
-			case 'x':
+			case ACT_VIEW_FILE_ATTR:
 				view_file_attr();
 				break;
 
-			case 'e':
+			case ACT_SHOW_HIST:
 				show_history();
 				break;
 
-			case '1': case '2': case '3': case '4': case '5': case '6': case '7':
-			case '8': case '9':;
+			case ACT_FAV1: case ACT_FAV2: case ACT_FAV3: case ACT_FAV4: case ACT_FAV5:
+			case ACT_FAV6: case ACT_FAV7: case ACT_FAV8: case ACT_FAV9:;
 				char envname[9];
-				snprintf(envname, 9, "CCC_FAV%d", ch - '0');
+				snprintf(envname, 9, "CCC_FAV%d", sel - ACT_FAV1 + 1);
 				char *fav = getenv(envname);
 				if (fav && !strcmp(fav, "")) {
 					char dir[PATH_MAX];
@@ -392,44 +440,44 @@ int main(int argc, char **argv)
 				break;
 
 			/* mark one file */
-			case SPACE:
+			case ACT_MARK_FILE:
 				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
 				break;
 
 			/* mark all files in directory */
-			case 'a':
+			case ACT_MARK_ALL:
 				change_dir(cwd, sel_file, 2); /* reload current dir */
 				break;
 
 			/* mark actions: */
 			/* delete */
-			case 'd':
+			case ACT_DELETE:
 				delete_files();
 				break;
 
 			/* move */
-			case 'm':
+			case ACT_MOVE:
 				if (marked->length) {
 					;
 				}
 				break;
 
 			/* copy */
-			case 'c':
+			case ACT_COPY:
 				if (marked->length) {
 					;
 				}
 				break;
 
 			/* symbolic link */
-			case 's':
+			case ACT_SYM_LINK:
 				if (marked->length) {
 					;
 				}
 				break;
 
 			/* bulk rename */
-			case 'b':
+			case ACT_BULK_RENAME:
 				if (marked->length) {
 					;
 				}
@@ -440,6 +488,17 @@ int main(int argc, char **argv)
 		}
 	}
 
+	return 0;
+}
+
+int getsel(void)
+{
+	int c = readch();
+	for (int i = 0; i < LEN(keybindings); i++) {
+		if (c == keybindings[i].key) {
+			return keybindings[i].act;
+		}
+	}
 	return 0;
 }
 
