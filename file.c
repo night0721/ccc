@@ -16,6 +16,7 @@ ArrayList *arraylist_init(size_t capacity)
 
 void arraylist_free(ArrayList *list)
 {
+	/*
 	for (size_t i = 0; i < list->length; i++) {
 		if (list->items[i].name != NULL)
 			free(list->items[i].name);
@@ -24,7 +25,7 @@ void arraylist_free(ArrayList *list)
 		if (list->items[i].stats != NULL)
 			free(list->items[i].stats);
 	}
-
+	*/
 	free(list->items);
 	free(list);
 }
@@ -57,7 +58,6 @@ void arraylist_remove(ArrayList *list, long index)
 	free(list->items[index].name);
 	free(list->items[index].path);
 	free(list->items[index].stats);
-	free(list->items[index].icon);
 	*/
 	for (long i = index; i < list->length - 1; i++)
 		list->items[i] = list->items[i + 1];

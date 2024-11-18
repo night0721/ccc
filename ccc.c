@@ -71,6 +71,8 @@ void start_shell(void);
 void yank_clipboard(void);
 void view_file_attr(void);
 void show_history(void);
+void open_with(void);
+void open_detached(void);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
 int readch(void);
@@ -363,7 +365,12 @@ int main(int argc, char **argv)
 				break;
 
 			case 'o':
+				open_with();
+				break;
 			case 'O':
+				open_detached();
+				break;
+
 			case 'x':
 				view_file_attr();
 				break;
@@ -373,7 +380,7 @@ int main(int argc, char **argv)
 				break;
 
 			case '1': case '2': case '3': case '4': case '5': case '6': case '7':
-			case '8': case '9':
+			case '8': case '9':;
 				char envname[9];
 				snprintf(envname, 9, "CCC_FAV%d", ch - '0');
 				char *fav = getenv(envname);
@@ -1312,6 +1319,67 @@ void show_history(void)
 	}
 	fclose(history_file);
 	readch();
+}
+
+void open_with(void)
+{
+	char *input = get_panel_string("open with: ");
+	if (!input) {
+		return;
+	}
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child process */
+		if (marked->length > 0) {
+			char *args[marked->length + 2];
+			args[0] = input;
+			for (int i = 0; i < marked->length; i++) {
+				args[i + 1] = marked->items[i].name;
+			}
+			args[marked->length + 1] = NULL;
+			execvp(input, args);
+		} else {
+			execlp(input, input, files->items[sel_file].name, NULL);
+		}
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
+	}
+}
+
+void open_detached(void)
+{
+	char *input = get_panel_string("open with (detached): ");
+	if (!input) {
+		return;
+	}
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child process */
+		if (marked->length > 0) {
+			char *args[marked->length + 3];
+			args[0] = "nohup";
+			args[1] = input;
+			for (int i = 0; i < marked->length; i++) {
+				args[i + 2] = marked->items[i].name;
+			}
+			args[marked->length + 1] = NULL;
+			execvp("nohup", args);
+		} else {
+			execlp("nohup", "nohup", input, files->items[sel_file].name, NULL);
+		}
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
+	}
 }
 
 /*
