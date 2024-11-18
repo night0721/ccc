@@ -459,9 +459,8 @@ void cleanup(void)
 	if (files->length != 0) {
 		arraylist_free(files);
 	}
-	if (marked->length != 0) {
-		arraylist_free(marked);
-	}
+	free(marked->items);
+	free(marked);
 	/* Restore old terminal settings */
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt);
 	bprintf("\033[2J\033[?1049l\033[?25h");

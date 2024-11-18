@@ -16,7 +16,6 @@ ArrayList *arraylist_init(size_t capacity)
 
 void arraylist_free(ArrayList *list)
 {
-	/*
 	for (size_t i = 0; i < list->length; i++) {
 		if (list->items[i].name != NULL)
 			free(list->items[i].name);
@@ -25,7 +24,6 @@ void arraylist_free(ArrayList *list)
 		if (list->items[i].stats != NULL)
 			free(list->items[i].stats);
 	}
-	*/
 	free(list->items);
 	free(list);
 }
