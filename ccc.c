@@ -1304,23 +1304,24 @@ void start_shell(void)
 	bprintf("\033[2J\033[?25h");
 	move_cursor(1, 1);
 	char shell[PATH_MAX];
-	strcpy(shell, getenv("SHELL"));
-	if (strlen(shell) == 0) {
+	char *shellenv = getenv("SHELL");
+	if (!shellenv) {
 		strcpy(shell, "sh");
 	} else {
-		pid_t pid = fork();
-		if (pid == 0) {
-			/* Child process */
-			execlp(shell, shell, NULL);
-			_exit(1); /* Exit if exec fails */
-		} else if (pid > 0) {
-			/* Parent process */
-			waitpid(pid, NULL, 0);
-			bprintf("\033[?25l");
-		} else {
-			/* Fork failed */
-			wpprintw("fork failed: %s", strerror(errno));
-		}
+		strcpy(shell, shellenv);
+	}
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child process */
+		execlp(shell, shell, NULL);
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+		bprintf("\033[?25l");
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
 	}
 }
 
