@@ -133,7 +133,6 @@ int get_window_size(int *row, int *col);
 void bprintf(const char *fmt, ...);
 
 /* global variables */
-unsigned int focus = 0;
 long sel_file = 0;
 int file_picker = 0;
 int to_open_file = 0;
@@ -505,10 +504,6 @@ int getsel(void)
 void handle_sigwinch(int ignore)
 {
 	get_window_size(&rows, &cols);
-	if (cols < 80 || rows < 24) {
-		cleanup();
-		die("ccc: Terminal size needs to be at least 80x24");
-	}
 	half_width = cols / 2 + window_offset;
 	list_files();
 }
