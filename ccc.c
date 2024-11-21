@@ -829,17 +829,11 @@ void add_file_stat(char *filename, char *path, int ftype)
  */
 void list_files(void)
 {
-	long overflow = 0;
-	if (sel_file > rows - 4) {
-		/* overflown */
-		overflow = sel_file - (rows - 4);
-	}
-
 	/* calculate range of files to show */
 	long range = files->length;
 	/* not highlight if no files in directory */
 	if (range == 0 && errno == 0) {
-		for (int i = 0; i < rows; i++) {
+		for (int i = 0; i < rows - 1; i++) {
 			move_cursor(i + 1, 1);
 			bprintf("\033[K");
 		}
@@ -848,16 +842,22 @@ void list_files(void)
 		return;
 	}
 
-	if (range > rows - 3) {
+	long overflow = 0;
+	if (sel_file > rows - 2) {
+		/* overflown */
+		overflow = sel_file - (rows - 2);
+	}
+	if (range > rows - 1) {
 		/* if there are more files than rows available to display
 		 * shrink range to avaiable rows to display with
 		 * overflow to keep the number of iterations to be constant */
-		range = rows - 3 + overflow;
+		range = rows - 1 + overflow;
 	}
 
 	move_cursor(1, 1);
 	bprintf("\033[2J");
 
+	int max_flen = 0;
 	for (long i = overflow; i < range; i++) {
 		int is_selected = 0;
 		if ((overflow == 0 && i == sel_file) ||
@@ -879,15 +879,20 @@ void list_files(void)
 		/* print the actual filename and stats */
 		char *line = get_line(files, i, show_details, show_icons);
 		int color = files->items[i].color;
+		int width = strlen(line);
+		if (width > max_flen) {
+			max_flen = width;
+		}
 		/* check is file marked for action */
 		int is_marked = arraylist_search(marked, files->items[i].path, 0) != -1;
-		move_cursor(i + 1, 1);
+		move_cursor(i - overflow + 1, 1);
 		if (is_marked) color = MAR_COLOR;
 		bprintf("\033[30m\033[%dm%s\033[m\n",
 				is_selected ? color + 10 : color, line);
 
 		free(line);
 	}
+	half_width = max_flen;
 
 	/* show file content every time cursor changes */
 	show_file_content();
@@ -904,7 +909,7 @@ void show_file_content(void)
 	if (current_file.type == DRY) {
 		ArrayList *files_visit;
 		populate_files(current_file.name, 0, &files_visit);
-		for (long i = 0; i < files_visit->length; i++) {
+		for (long i = 0; i < files_visit->length && i < rows - 1; i++) {
 			char *line = get_line(files_visit, i, 0, show_icons);
 			int color = files_visit->items[i].color;
 			move_cursor(i + 1, half_width);
@@ -935,7 +940,6 @@ void show_file_content(void)
 	int pid = fork();
 	if (pid == 0) {
 		/* Child */
-		move_cursor(1, half_width);
 		close(pipe_fd[0]);
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		dup2(pipe_fd[1], STDERR_FILENO);
@@ -953,16 +957,13 @@ void show_file_content(void)
 			size_t buflen = strlen(buffer);
 			if (buffer[0] == '\0' || strspn(buffer, " \t") == buflen) {
 				move_cursor(row++, half_width);
-				putchar('\n');
+				bprintf("\n");
 				continue;
 			}
 			move_cursor(row++, half_width);
 			/* Visible length */
 			size_t len = 0;
 			for (size_t i = 0; i < buflen; i++) {
-				if ((len + 1) % (cols - half_width) == 0) {
-					move_cursor(row++, half_width);
-				}
 				if (buffer[i] == '\033' && buffer[i + 1] == '[') {
 					char *end = strpbrk(buffer + i, "ABCDEFGHJKfhlmus");
 					if (end) {
@@ -979,11 +980,17 @@ void show_file_content(void)
 							i += length - 1;
 							continue;
 						}
+					} else {
+						bprintf("%c", buffer[i]);
 					}
-					bprintf("%c", buffer[i]);
 				} else {
 					bprintf("%c", buffer[i]);
 					len++;
+				}
+				if (len && (len) % (cols - half_width + 1) == 0) {
+					if (row + 1 < rows) {
+						move_cursor(row++, half_width);
+					}
 				}
 			}
 		}

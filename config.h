@@ -52,7 +52,7 @@ static char last_d[PATH_MAX] = "~/.cache/ccc/.ccc_d";
 /* Will create this directory if doesn't exist! */
 static char trash_dir[PATH_MAX]  = "~/.cache/ccc/trash/";
 
-key keybindings[] = {
+static Key keybindings[] = {
 	{'q', ACT_QUIT},
 	{'z', ACT_RELOAD},
 	{BACKSPACE, ACT_BACK},
