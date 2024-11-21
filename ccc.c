@@ -1237,9 +1237,6 @@ void show_history(const Arg *arg)
 void open_fav(const Arg *arg)
 {
 	char envname[9];
-	FILE*f=fopen("/home/night/a", "a");
-	fprintf(f, "%d\n", arg->i);
-	fclose(f);
 	snprintf(envname, 9, "CCC_FAV%d", arg->i);
 	char *fav = getenv(envname);
 	if (fav && strcmp(fav, "")) {
