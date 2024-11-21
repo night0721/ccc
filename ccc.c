@@ -524,19 +524,41 @@ void show_help(void)
 {
 	bprintf("\033[2J");
 	move_cursor(1, 1);
-	bprintf("h: go to parent dir\nj: scroll down\nk: scroll up\n"
-			"l: go to child dir\n\nleft: go to parent dir\ndown: scroll down\n"
-			"up: scroll up\nright: go to child dir\n\n"
-			"enter: go to child dir/open file\nbackspace: go to parent dir\n\n"
-			"gg: go to top\nG: go to bottom\n\nctrl+u: jump up\nctrl+d: jump down\n\n"
-			"t: go to trash dir\n~: go to home dir\n-: go to previous dir\n"
-			"z: refresh current dir\n:: go to a directory by typing\nu: sort files\n\n"
-			".: toggle hidden files\ni: toggle file details\nX: toggle executable\n\n"
-			"A: show directory disk usage/block size\n\nf: new file\nn: new dir\n"
-			"r: rename\n\nspace: mark file\na: mark all files in directory\nd: trash"
-			"\n\n?: show help\nq: exit with last dir written to file\n"
-			"ctrl+c exit without writing last dir"
-			"\nPress any key to continue"
+	bprintf(
+		"h/left/backspace: go to parent dir\n"
+		"j/down: scroll down\n"
+		"k/up: scroll up\n"
+		"l/right/enter: go to child dir\n\n"
+		"o: open file with\n"
+		"O: open file with a GUI program detached from file manager\n\n"
+		"g: go to top\n"
+		"G: go to bottom\n\n"
+		"ctrl+u: jump up\n"
+		"ctrl+d: jump down\n\n"
+		"t: go to trash dir\n"
+		"~: go to home dir\n"
+		"-: go to previous dir\n"
+		"z: refresh current dir\n"
+		":: go to a directory by typing\n\n"
+		".: toggle hidden files\n"
+		"A: show directory disk usage/block size\n"
+		"i: toggle file details\n"
+		"u: sort files\n"
+		"x: view file/dir attributes\n"
+		"e: show history\n"
+		"y: copy filename to clipboard\n"
+		"!: open shell in current dir\n\n"
+		"f: new file\n"
+		"n: new dir\n"
+		"r: rename\n"
+		"X: toggle executable\n\n"
+		"space: mark file\n"
+		"a: mark all files in directory\n"
+		"d: trash\n\n"
+		"[1-9]: favourites/bookmarks (see customizing)\n\n"
+		"?: show help\n"
+		"q: exit with last dir written to file\n"
+		"ctrl+c exit without writing last dir\n"
 	);
 	wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
 	readch();
@@ -1508,7 +1530,7 @@ int get_window_size(int *row, int *col)
  */
 void bprintf(const char *fmt, ...)
 {
-	char buffer[512];
+	char buffer[1024];
 	va_list args;
 
 	va_start(args, fmt);

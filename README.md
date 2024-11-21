@@ -31,18 +31,10 @@ ccc dir
 ```
 
 ```
-h: go to parent dir
-j: scroll down
-k: scroll up
-l: go to child dir
-
-left:  go to parent dir
-down:  scroll down
-up:    scroll up
-right: go to child dir
-
-enter: go to child dir/open file
-backspace: go to parent dir
+h/left/backspace: go to parent dir
+j/down: scroll down
+k/up: scroll up
+l/right/enter: go to child dir
 
 o: open file with
 O: open file with a GUI program detached from file manager
