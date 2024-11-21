@@ -1,20 +1,20 @@
+#include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
+#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
-#include <dirent.h>
-#include <errno.h>
-#include <ftw.h>
-#include <time.h>
-#include <termios.h>
-#include <ctype.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <termios.h>
+#include <time.h>
 
-#include "file.h"
 #include "icons.h"
+#include "file.h"
 #include "util.h"
 
 #define LEN(x) (sizeof(x) / sizeof(*(x)))
@@ -90,7 +90,7 @@ enum action {
 typedef struct {
 	int key;
 	enum action act;
-} key;
+} Key;
 
 #define PATH_MAX 4096 /* Max length of path */
 
@@ -893,49 +893,6 @@ void list_files(void)
 	show_file_content();
 }
 
-size_t get_effective_length(const char *str)
-{
-	size_t length = 0;
-	int in_ansi_sequence = 0;
-
-	while (*str) {
-		if (*str == '\033') {
-			in_ansi_sequence = 1;
-		} else if (in_ansi_sequence && *str == 'm') {
-			in_ansi_sequence = 0;
-		} else if (!in_ansi_sequence) {
-			length++;
-		}
-		str++;
-	}
-
-	return length;
-}
-
-void print_chunk(const char *str, size_t start, size_t end)
-{
-	int in_ansi_sequence = 0;
-	size_t printed_length = 0;
-
-	for (size_t i = start; i < end; i++) {
-		if (str[i] == '\033') {
-			in_ansi_sequence = 1;
-		}
-		if (in_ansi_sequence) {
-			putchar(str[i]);
-			if (str[i] == 'm') {
-				in_ansi_sequence = 0;
-			}
-		} else {
-			putchar(str[i]);
-			printed_length++;
-			if (printed_length >= (end - start)) {
-				break;
-			}
-		}
-	}
-}
-
 /*
  * Get file content into buffer and show it to preview window
  */
@@ -993,53 +950,41 @@ void show_file_content(void)
 		FILE *stream = fdopen(pipe_fd[0], "r");
 		while (fgets(buffer, sizeof(buffer), stream) && row <= rows - 1) {
 			buffer[strcspn(buffer, "\n")] = 0;
-
-			if (buffer[0] == '\0' || strspn(buffer, " \t") == strlen(buffer)) {
+			size_t buflen = strlen(buffer);
+			if (buffer[0] == '\0' || strspn(buffer, " \t") == buflen) {
 				move_cursor(row++, half_width);
 				putchar('\n');
 				continue;
 			}
-			/* Length without ANSI codes */
-			size_t effective_len = get_effective_length(buffer);
-			size_t offset = 0;
-			while (effective_len > 0 && row <= rows - 1) {
-				move_cursor(row++, half_width);
-
-				/* Calculate the chunk size based on effective length */
-				size_t chunk_size = (effective_len > (cols - half_width)) ? (cols - half_width) : effective_len;
-
-				/* Find the actual end position in the string to avoid cutting ANSI sequences */
-				size_t actual_end = offset;
-				size_t visible_count = 0;
-				int in_ansi_sequence = 0;
-
-				while (visible_count < chunk_size && buffer[actual_end] != '\0') {
-					if (buffer[actual_end] == '\033') {
-						in_ansi_sequence = 1;
-					}
-					if (!in_ansi_sequence) {
-						visible_count++;
-					}
-					if (in_ansi_sequence && buffer[actual_end] == 'm') {
-						in_ansi_sequence = 0;
-					}
-					actual_end++;
+			move_cursor(row++, half_width);
+			/* Visible length */
+			size_t len = 0;
+			for (size_t i = 0; i < buflen; i++) {
+				if ((len + 1) % (cols - half_width) == 0) {
+					move_cursor(row++, half_width);
 				}
-
-				/* Print the chunk from `offset` to `actual_end` */
-				print_chunk(buffer, offset, actual_end);
-
-				/* Update offsets based on the effective length and ANSI-aware chunk */
-				offset = actual_end;
-				effective_len -= chunk_size;
-
-				putchar('\n');
-			}
-			/* Check if the line ends with the ANSI reset sequence `\033[0m` */
-			size_t len = strlen(buffer);
-			if (len >= 4 && strcmp(&buffer[len - 4], "\033[0m") == 0) {
-				/* Line ends with ANSI reset, print it */
-				printf("\033[0m");
+				if (buffer[i] == '\033' && buffer[i + 1] == '[') {
+					char *end = strpbrk(buffer + i, "ABCDEFGHJKfhlmus");
+					if (end) {
+						char ansiseq[128];
+						int start = i;
+						/* Find the last 'm' after the escape character */
+						int length = end - (buffer + start) + 1;
+						/* Ensure it fits within the buffer */
+						if (length < sizeof(ansiseq)) {
+							strncpy(ansiseq, buffer + start, length);
+							ansiseq[length] = '\0';
+							bprintf("%s", ansiseq);
+							/* Update the index to the character after the sequence */
+							i += length - 1;
+							continue;
+						}
+					}
+					bprintf("%c", buffer[i]);
+				} else {
+					bprintf("%c", buffer[i]);
+					len++;
+				}
 			}
 		}
 		fclose(stream);
