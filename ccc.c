@@ -18,6 +18,7 @@
 #include "util.h"
 
 #define LEN(x) (sizeof(x) / sizeof(*(x)))
+#define PATH_MAX 4096 /* Max length of path */
 
 /* Keybindings */
 enum keys {
@@ -38,94 +39,64 @@ enum keys {
 	PAGE_DOWN,
 };
 
-enum action {
-	ACT_QUIT = 1,
-	ACT_RELOAD,
-	ACT_BACK,
-	ACT_ENTER,
-	ACT_JUMP_UP,
-	ACT_JUMP_DOWN,
-	ACT_UP,
-	ACT_DOWN,
-	ACT_BOTTOM,
-	ACT_TOP,
-	ACT_HOME,
-	ACT_TRASH_DIR,
-	ACT_SORT,
-	ACT_SHOW_DIR_SIZE,
-	ACT_PREV_DIR,
-	ACT_SHOW_HELP,
-	ACT_HIDDEN_FILES,
-	ACT_FILE_DETAILS,
-	ACT_SHOW_ICONS,
-	ACT_CREATE_FILE,
-	ACT_CREATE_DIR,
-	ACT_RENAME_FILE,
-	ACT_GOTO_DIR,
-	ACT_TOGGLE_EXE,
-	ACT_START_SHELL,
-	ACT_COPY_FILENAME,
-	ACT_OPEN_FILE,
-	ACT_OPEN_FILE_DETACHED,
-	ACT_VIEW_FILE_ATTR,
-	ACT_SHOW_HIST,
-	ACT_FAV1,
-	ACT_FAV2,
-	ACT_FAV3,
-	ACT_FAV4,
-	ACT_FAV5,
-	ACT_FAV6,
-	ACT_FAV7,
-	ACT_FAV8,
-	ACT_FAV9,
-	ACT_MARK_FILE,
-	ACT_MARK_ALL,
-	ACT_DELETE,
-	ACT_MOVE,
-	ACT_COPY,
-	ACT_SYM_LINK,
-	ACT_BULK_RENAME,
-};
+typedef union {
+	int i;
+	const void *v;
+} Arg;
 
 typedef struct {
 	int key;
-	enum action act;
+	void (*func)(const Arg *);
+	const Arg arg;
 } Key;
 
-#define PATH_MAX 4096 /* Max length of path */
-
-#include "config.h"
-
-int getsel(void);
+void keybinding(void);
 void handle_sigwinch(int ignore);
 void cleanup(void);
-void show_help(void);
 char *check_trash_dir(void);
 void change_dir(const char *buf, int selection, int ftype);
-void mkdir_p(const char *destdir);
 void populate_files(const char *path, int ftype, ArrayList **list);
-int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 void add_file_stat(char *filename, char *path, int ftype);
 void list_files(void);
-void show_file_content(void);
-void edit_file(void);
-void toggle_executable(void);
-void replace_home(char *str);
-int write_last_d(void);
-int sort_compare(const void *a, const void *b);
-void sort_files(void);
 char *get_panel_string(char *prompt);
-void rename_file(void);
-void goto_dir(void);
-void create_dir(void);
-void create_file(void);
-void delete_files(void);
-void start_shell(void);
-void yank_clipboard(void);
-void view_file_attr(void);
-void show_history(void);
-void open_with(void);
-void open_detached(void);
+void quit(const Arg *arg);
+void reload(const Arg *arg);
+void nav_back(const Arg *arg);
+void nav_enter(const Arg *arg);
+void nav_jump_up(const Arg *arg);
+void nav_jump_down(const Arg *arg);
+void nav_up(const Arg *arg);
+void nav_down(const Arg *arg);
+void nav_bottom(const Arg *arg);
+void nav_top(const Arg *arg);
+void goto_home_dir(const Arg *arg);
+void goto_trash_dir(const Arg *arg);
+void sort_files(const Arg *arg);
+void show_dir_size(const Arg *arg);
+void prev_dir(const Arg *arg);
+void show_help(const Arg *arg);
+void toggle_hidden_files(const Arg *arg);
+void toggle_file_details(const Arg *arg);
+void toggle_show_icons(const Arg *arg);
+void create_file(const Arg *arg);
+void create_dir(const Arg *arg);
+void rename_file(const Arg *arg);
+void goto_dir(const Arg *arg);
+void toggle_executable(const Arg *arg);
+void start_shell(const Arg *arg);
+void yank_clipboard(const Arg *arg);
+void open_with(const Arg *arg);
+void open_detached(const Arg *arg);
+void view_file_attr(const Arg *arg);
+void show_history(const Arg *arg);
+void open_fav(const Arg *arg);
+void mark_file(const Arg *arg);
+void mark_all(const Arg *arg);
+void delete_files(const Arg *arg);
+void move_files(const Arg *arg);
+void copy_files(const Arg *arg);
+void symbolic_link(const Arg *arg);
+void bulk_rename(const Arg *arg);
 void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
 int readch(void);
@@ -146,8 +117,9 @@ ArrayList *tmp1; /* temp store of dirs */
 ArrayList *tmp2; /* tmp store of files */
 int rows, cols;
 struct termios oldt, newt;
-
 unsigned long total_dir_size = 0;
+
+#include "config.h"
 
 int main(int argc, char **argv)
 {
@@ -155,7 +127,7 @@ int main(int argc, char **argv)
 		if (strncmp(argv[2], "-p", 2) == 0)
 			file_picker = 1;
 	}
-	if (argc <= 3 && argc != 1) {
+	if (argc == 2) {
 		if (strncmp(argv[1], "-h", 2) == 0)
 			die("Usage: ccc filename");
 
@@ -190,7 +162,6 @@ int main(int argc, char **argv)
 	sa.sa_handler = handle_sigwinch;
 	sa.sa_flags = SA_RESTART;
 	sigemptyset(&sa.sa_mask);
-
 	if (sigaction(SIGWINCH, &sa, NULL) == -1) {
 		perror("sigaction");
 		exit(1);
@@ -223,289 +194,27 @@ int main(int argc, char **argv)
 		sel_file = arraylist_search(files, argv_cp, 1);
 	}
 
-	int run = 1;
-	while (run) {
+	while (1) {
 		list_files();
-		int sel = getsel();	
-		switch (sel) {
-			/* quit */
-			case ACT_QUIT:
-				if (write_last_d() == -1) {
-					/* prompt user so error message can be shown to user */
-					readch();
-				}
-				cleanup();
-				run = 0;
-				break;
-
-			/* reload */
-			case ACT_RELOAD:
-				change_dir(cwd, 0, 0); 
-				break;
-
-			/* go back */
-			case ACT_BACK:;
-				char dir[PATH_MAX];
-				strcpy(dir, cwd);
-				/* get parent directory */
-				char *last_slash = strrchr(dir, '/');
-				if (last_slash) {
-					if (!strcmp(last_slash, dir)) {
-						change_dir("/", 0, 0);
-						break;
-					}
-					*last_slash = '\0';
-					change_dir(dir, 0, 0);
-				}
-				break;
-
-			/* enter directory/open a file */
-			case ACT_ENTER:;
-				file c_file = files->items[sel_file];
-
-				/* Check if it is directory or a regular file */
-				if (c_file.type == DRY) {
-					/* Change cwd to directory */
-					change_dir(c_file.path, 0, 0); 
-				} else if (c_file.type == REG) {
-					/* Write opened file to a file for file pickers */
-					if (file_picker) {
-						char opened_file_path[PATH_MAX];
-						strcpy(opened_file_path, "~/.cache/ccc/opened_file");
-						replace_home(opened_file_path);
-						FILE *opened_file = fopen(opened_file_path, "w+");
-						fprintf(opened_file, "%s\n", c_file.path);
-						fclose(opened_file);
-						cleanup();
-						run = 0;
-					} else {
-						edit_file();
-					}
-				}
-				break;
-
-			/* jump up */
-			case ACT_JUMP_UP:
-				if ((sel_file - jump_num) > 0)
-					sel_file -= jump_num;
-				else
-					sel_file = 0;
-				break;
-
-			/* jump down */
-			case ACT_JUMP_DOWN:
-				if ((sel_file + jump_num) < (files->length - 1))
-					sel_file += jump_num;
-				else
-					sel_file = (files->length - 1);
-				break;
-
-			/* go up */
-			case ACT_UP:
-				if (sel_file > 0)
-					sel_file--;
-				break;
-
-			/* go down */
-			case ACT_DOWN:
-				if (sel_file < (files->length - 1))
-					sel_file++;
-				break;
-
-			/* jump to the bottom */
-			case ACT_BOTTOM:
-				sel_file = (files->length - 1);
-				break;
-
-			/* jump to the top */
-			case ACT_TOP:
-				sel_file = 0;
-				break;
-
-			/* '~' go to $HOME */
-			case ACT_HOME:;
-				char *home = getenv("HOME");
-				if (!home) {
-					wpprintw("$HOME not defined (Press any key to continue)");
-					readch();
-				} else {
-					change_dir(home, 0, 0);
-				}
-				break;
-
-			/* go to the trash dir */
-			case ACT_TRASH_DIR:;
-				char *trash_dir = check_trash_dir();
-				if (trash_dir) {
-					change_dir(trash_dir, 0, 0);
-					free(trash_dir);
-				}
-				break;
-
-			/* sort files */
-			case ACT_SORT:
-				sort_files();
-				break;
-
-			/* show directories' sizes */
-			case ACT_SHOW_DIR_SIZE:
-				dirs_size = !dirs_size;
-				change_dir(cwd, 0, 0);
-				break;
-
-			/* go to previous dir */
-			case ACT_PREV_DIR:
-				if (strlen(p_cwd) != 0)
-					change_dir(p_cwd, 0, 0);
-				break;
-
-			/* show help */
-			case ACT_SHOW_HELP:
-				show_help();
-				break;
-
-			/* toggle hidden files */
-			case ACT_HIDDEN_FILES:
-				show_hidden = !show_hidden;
-				change_dir(cwd, 0, 0);
-				break;
-
-			/* toggle file details */
-			case ACT_FILE_DETAILS:
-				show_details = !show_details;
-				change_dir(cwd, 0, 0);
-				break;
-
-			case ACT_SHOW_ICONS:
-				show_icons = !show_icons;
-				change_dir(cwd, 0, 0);
-				break;
-
-			case ACT_CREATE_FILE:
-				create_file();
-				break;
-
-			case ACT_CREATE_DIR:
-				create_dir();
-				break;
-
-			case ACT_RENAME_FILE:
-				rename_file();
-				break;
-
-			case ACT_GOTO_DIR:
-				goto_dir();
-				break;
-
-			case ACT_TOGGLE_EXE:
-				toggle_executable();
-				change_dir(cwd, 0, 0);
-				break;
-
-			case ACT_START_SHELL:
-				start_shell();
-				break;
-
-			case ACT_COPY_FILENAME:
-				yank_clipboard();
-				break;
-
-			case ACT_OPEN_FILE:
-				open_with();
-				break;
-
-			case ACT_OPEN_FILE_DETACHED:
-				open_detached();
-				break;
-
-			case ACT_VIEW_FILE_ATTR:
-				view_file_attr();
-				break;
-
-			case ACT_SHOW_HIST:
-				show_history();
-				break;
-
-			case ACT_FAV1: case ACT_FAV2: case ACT_FAV3: case ACT_FAV4: case ACT_FAV5:
-			case ACT_FAV6: case ACT_FAV7: case ACT_FAV8: case ACT_FAV9:;
-				char envname[9];
-				snprintf(envname, 9, "CCC_FAV%d", sel - ACT_FAV1 + 1);
-				char *fav = getenv(envname);
-				if (fav && !strcmp(fav, "")) {
-					char dir[PATH_MAX];
-					strcpy(dir, fav);
-					change_dir(dir, 0, 0);
-				}
-				break;
-
-			/* mark one file */
-			case ACT_MARK_FILE:
-				add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
-				break;
-
-			/* mark all files in directory */
-			case ACT_MARK_ALL:
-				change_dir(cwd, sel_file, 2); /* reload current dir */
-				break;
-
-			/* mark actions: */
-			/* delete */
-			case ACT_DELETE:
-				delete_files();
-				break;
-
-			/* move */
-			case ACT_MOVE:
-				if (marked->length) {
-					;
-				}
-				break;
-
-			/* copy */
-			case ACT_COPY:
-				if (marked->length) {
-					;
-				}
-				break;
-
-			/* symbolic link */
-			case ACT_SYM_LINK:
-				if (marked->length) {
-					;
-				}
-				break;
-
-			/* bulk rename */
-			case ACT_BULK_RENAME:
-				if (marked->length) {
-					;
-				}
-				break;
-
-			default:
-				break;
-		}
+		keybinding();	
 	}
-
 	return 0;
 }
 
-int getsel(void)
+void keybinding(void)
 {
 	int c = readch();
 	for (int i = 0; i < LEN(keybindings); i++) {
 		if (c == keybindings[i].key) {
-			return keybindings[i].act;
+			keybindings[i].func(&keybindings[i].arg);
+			return;
 		}
 	}
-	return 0;
 }
 
 void handle_sigwinch(int ignore)
 {
 	get_window_size(&rows, &cols);
-	half_width = cols / 2 + window_offset;
-	list_files();
 }
 
 void cleanup(void)
@@ -520,99 +229,18 @@ void cleanup(void)
 	bprintf("\033[2J\033[?1049l\033[?25h");
 }
 
-void show_help(void)
+void replace_home(char *str)
 {
-	bprintf("\033[2J");
-	move_cursor(1, 1);
-	bprintf(
-		"h/left/backspace: go to parent dir\n"
-		"j/down: scroll down\n"
-		"k/up: scroll up\n"
-		"l/right/enter: go to child dir\n\n"
-		"o: open file with\n"
-		"O: open file with a GUI program detached from file manager\n\n"
-		"g: go to top\n"
-		"G: go to bottom\n\n"
-		"ctrl+u: jump up\n"
-		"ctrl+d: jump down\n\n"
-		"t: go to trash dir\n"
-		"~: go to home dir\n"
-		"-: go to previous dir\n"
-		"z: refresh current dir\n"
-		":: go to a directory by typing\n\n"
-		".: toggle hidden files\n"
-		"A: show directory disk usage/block size\n"
-		"i: toggle file details\n"
-		"u: sort files\n"
-		"x: view file/dir attributes\n"
-		"e: show history\n"
-		"y: copy filename to clipboard\n"
-		"!: open shell in current dir\n\n"
-		"f: new file\n"
-		"n: new dir\n"
-		"r: rename\n"
-		"X: toggle executable\n\n"
-		"space: mark file\n"
-		"a: mark all files in directory\n"
-		"d: trash\n\n"
-		"[1-9]: favourites/bookmarks (see customizing)\n\n"
-		"?: show help\n"
-		"q: exit with last dir written to file\n"
-		"ctrl+c exit without writing last dir\n"
-	);
-	wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
-	readch();
-}
-
-/*
- * Checks if the trash directory is set and returns it
- */
-char *check_trash_dir(void)
-{
-	char *path = memalloc(PATH_MAX);
-
-	/* check if there is trash_dir */
-	if (!strcmp(trash_dir, "")) {
-		wpprintw("Trash directory not defined");
-		return NULL;
-	} else {
-		strcpy(path, trash_dir);
-		/* if trash_dir has ~ then make it $HOME */
-		/* use path as trash_dir */
-		if (path[0] == '~')
-			replace_home(path);
-
-		/* if has access to trash_dir */
-		if (access(path, F_OK) != 0) {
-			/* create the directory with 755 permissions if it doesn't exist */
-			mkdir_p(path);		
-		}
+	char *home = getenv("HOME");
+	if (!home) {
+		wpprintw("$HOME not defined");
+		return;
 	}
-	return path;
-}
-
-/*
- * Change directory in window with selection
- */
-void change_dir(const char *buf, int selection, int ftype)
-{
-	if (strcmp(cwd, buf) != 0) {
-		char tmp[PATH_MAX];
-		strcpy(tmp, buf);
-		strcpy(p_cwd, cwd);
-		strcpy(cwd, tmp);
-		char history_path[PATH_MAX];
-		strcpy(history_path, "~/.cache/ccc/history");
-		replace_home(history_path);
-		FILE *history_file = fopen(history_path, "a");
-		fprintf(history_file, "%s\n", cwd);
-		fclose(history_file);
-	}
-	if (ftype == 0)
-		arraylist_free(files);
-	chdir(cwd);
-	sel_file = selection;
-	populate_files(cwd, ftype, &files);
+	int len = strlen(str) + strlen(home) + 1;
+	char newstr[len];
+	/* replace ~ with home */
+	snprintf(newstr, len, "%s%s", home, str + 1);
+	strcpy(str, newstr);
 }
 
 /*
@@ -661,6 +289,38 @@ void mkdir_p(const char *destdir)
 }
 
 /*
+ * Checks if the trash directory is set and returns it
+ */
+char *check_trash_dir(void)
+{
+	char *path = memalloc(PATH_MAX);
+
+	/* check if there is trash_dir */
+	if (!strcmp(trash_dir, "")) {
+		wpprintw("Trash directory not defined");
+		return NULL;
+	} else {
+		strcpy(path, trash_dir);
+		/* if trash_dir has ~ then make it $HOME */
+		/* use path as trash_dir */
+		if (path[0] == '~')
+			replace_home(path);
+
+		/* if has access to trash_dir */
+		if (access(path, F_OK) != 0) {
+			/* create the directory with 755 permissions if it doesn't exist */
+			mkdir_p(path);		
+		}
+	}
+	return path;
+}
+
+int sort_compare(const void *a, const void *b)
+{
+	return strcmp(((file *) a)->name, ((file *) b)->name);
+}
+
+/*
  * Read the provided directory and add all files in directory to an Arraylist
  * ftype: normal files = 0, marked = 1, marking ALL = 2
  */
@@ -706,6 +366,30 @@ void populate_files(const char *path, int ftype, ArrayList **list)
 	} else {
 		wpprintw("stat failed: %s", strerror(errno));
 	}
+}
+
+/*
+ * Change directory in window with selection
+ */
+void change_dir(const char *buf, int selection, int ftype)
+{
+	if (strcmp(cwd, buf) != 0) {
+		char tmp[PATH_MAX];
+		strcpy(tmp, buf);
+		strcpy(p_cwd, cwd);
+		strcpy(cwd, tmp);
+		char history_path[PATH_MAX];
+		strcpy(history_path, "~/.cache/ccc/history");
+		replace_home(history_path);
+		FILE *history_file = fopen(history_path, "a");
+		fprintf(history_file, "%s\n", cwd);
+		fclose(history_file);
+	}
+	if (ftype == 0)
+		arraylist_free(files);
+	chdir(cwd);
+	sel_file = selection;
+	populate_files(cwd, ftype, &files);
 }
 
 int get_directory_size(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
@@ -847,80 +531,6 @@ void add_file_stat(char *filename, char *path, int ftype)
 }
 
 /*
- * Print files in directory window 
- */
-void list_files(void)
-{
-	/* calculate range of files to show */
-	long range = files->length;
-	/* not highlight if no files in directory */
-	if (range == 0 && errno == 0) {
-		for (int i = 0; i < rows - 1; i++) {
-			move_cursor(i + 1, 1);
-			bprintf("\033[K");
-		}
-		move_cursor(1, half_width);
-		bprintf("empty directory");
-		return;
-	}
-
-	long overflow = 0;
-	if (sel_file > rows - 2) {
-		/* overflown */
-		overflow = sel_file - (rows - 2);
-	}
-	if (range > rows - 1) {
-		/* if there are more files than rows available to display
-		 * shrink range to avaiable rows to display with
-		 * overflow to keep the number of iterations to be constant */
-		range = rows - 1 + overflow;
-	}
-
-	move_cursor(1, 1);
-	bprintf("\033[2J");
-
-	int max_flen = 0;
-	for (long i = overflow; i < range; i++) {
-		int is_selected = 0;
-		if ((overflow == 0 && i == sel_file) ||
-				(overflow != 0 && i == sel_file)) {
-			is_selected = 1;
-			/* check for marked files */
-			long num_marked = marked->length;
-			if (num_marked > 0) {
-				/* Determine length of formatted string */
-				int m_len = snprintf(NULL, 0, "[%ld] selected", num_marked);
-				char selected[m_len + 1];
-
-				snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
-				wpprintw("(%ld/%ld) %s %s", sel_file + 1, files->length, selected, cwd);
-			} else {
-				wpprintw("(%ld/%ld) %s", sel_file + 1, files->length, cwd);
-			}
-		}
-		/* print the actual filename and stats */
-		char *line = get_line(files, i, show_details, show_icons);
-		int color = files->items[i].color;
-		int width = strlen(line);
-		if (width > max_flen) {
-			max_flen = width;
-		}
-		/* check is file marked for action */
-		int is_marked = arraylist_search(marked, files->items[i].path, 0) != -1;
-		move_cursor(i - overflow + 1, 1);
-		if (is_marked) color = MAR_COLOR;
-		bprintf("\033[30m\033[%dm%s\033[m\n",
-				is_selected ? color + 10 : color, line);
-
-		free(line);
-	}
-	half_width = max_flen;
-
-	/* show file content every time cursor changes */
-	show_file_content();
-}
-
-/*
  * Get file content into buffer and show it to preview window
  */
 void show_file_content(void)
@@ -1024,6 +634,80 @@ void show_file_content(void)
 }
 
 /*
+ * Print files in directory window 
+ */
+void list_files(void)
+{
+	/* calculate range of files to show */
+	long range = files->length;
+	/* not highlight if no files in directory */
+	if (range == 0 && errno == 0) {
+		for (int i = 0; i < rows - 1; i++) {
+			move_cursor(i + 1, 1);
+			bprintf("\033[K");
+		}
+		move_cursor(1, half_width);
+		bprintf("empty directory");
+		return;
+	}
+
+	long overflow = 0;
+	if (sel_file > rows - 2) {
+		/* overflown */
+		overflow = sel_file - (rows - 2);
+	}
+	if (range > rows - 1) {
+		/* if there are more files than rows available to display
+		 * shrink range to avaiable rows to display with
+		 * overflow to keep the number of iterations to be constant */
+		range = rows - 1 + overflow;
+	}
+
+	move_cursor(1, 1);
+	bprintf("\033[2J");
+
+	int max_flen = 0;
+	for (long i = overflow; i < range; i++) {
+		int is_selected = 0;
+		if ((overflow == 0 && i == sel_file) ||
+				(overflow != 0 && i == sel_file)) {
+			is_selected = 1;
+			/* check for marked files */
+			long num_marked = marked->length;
+			if (num_marked > 0) {
+				/* Determine length of formatted string */
+				int m_len = snprintf(NULL, 0, "[%ld] selected", num_marked);
+				char selected[m_len + 1];
+
+				snprintf(selected, m_len + 1, "[%ld] selected", num_marked);
+				wpprintw("(%ld/%ld) %s %s", sel_file + 1, files->length, selected, cwd);
+			} else {
+				wpprintw("(%ld/%ld) %s", sel_file + 1, files->length, cwd);
+			}
+		}
+		/* print the actual filename and stats */
+		char *line = get_line(files, i, show_details, show_icons);
+		int color = files->items[i].color;
+		int width = strlen(line);
+		if (width > max_flen) {
+			max_flen = width;
+		}
+		/* check is file marked for action */
+		int is_marked = arraylist_search(marked, files->items[i].path, 0) != -1;
+		move_cursor(i - overflow + 1, 1);
+		if (is_marked) color = MAR_COLOR;
+		bprintf("\033[30m\033[%dm%s\033[m\n",
+				is_selected ? color + 10 : color, line);
+
+		free(line);
+	}
+	half_width = max_flen;
+
+	/* show file content every time cursor changes */
+	show_file_content();
+}
+
+/*
  * Opens $EDITOR to edit the file
  */
 void edit_file(void)
@@ -1050,79 +734,6 @@ void edit_file(void)
 			wpprintw("fork failed: %s", strerror(errno));
 		}
 	}
-}
-
-void toggle_executable(void)
-{
-	file f = files->items[sel_file];
-	struct stat st;
-	if (stat(f.path, &st) == -1) {
-		wpprintw("stat failed: %s (Press any key to continue)", strerror(errno));
-		readch();
-		return;
-	}
-	if (f.type == DRY)
-		return;
-	/* chmod by xor executable bits */
-	if (chmod(f.path, st.st_mode ^ (S_IXUSR | S_IXGRP | S_IXOTH)) == -1) {
-		wpprintw("Error toggling executable: %s (Press any key to continue)", strerror(errno));
-		readch();
-	}
-}
-
-void replace_home(char *str)
-{
-	char *home = getenv("HOME");
-	if (!home) {
-		wpprintw("$HOME not defined");
-		return;
-	}
-	int len = strlen(str) + strlen(home) + 1;
-	char newstr[len];
-	/* replace ~ with home */
-	snprintf(newstr, len, "%s%s", home, str + 1);
-	strcpy(str, newstr);
-}
-
-int write_last_d(void)
-{
-	if (!strcmp(last_d, "")) {
-		strcpy(last_d, getenv("CCC_LAST_D"));
-		if (!strcmp(last_d, "")) {
-			wpprintw("$CCC_LAST_D not defined (Press any key to continue)");
-			return -1;
-		}
-	} else {
-		if (last_d[0] == '~')
-			replace_home(last_d);
-
-		char last_ddup[PATH_MAX];
-		strcpy(last_ddup, last_d);
-
-		char *last_d_dir = strrchr(last_ddup, '/');
-		if (last_d_dir) {
-			*last_d_dir = '\0'; /* truncate string */
-		}
-		mkdir_p(last_ddup);
-		FILE *last_d_file = fopen(last_d, "w");
-		if (!last_d_file) {
-			wpprintw("Cannot open last directory file (Press any key to continue)");
-			return -1;
-		}
-		fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
-		fclose(last_d_file);
-	}
-	return 0;
-}
-
-int sort_compare(const void *a, const void *b)
-{
-	return strcmp(((file *) a)->name, ((file *) b)->name);
-}
-
-void sort_files(void)
-{
-	qsort(files->items, files->length, sizeof(file), sort_compare);
 }
 
 char *get_panel_string(char *prompt)
@@ -1167,7 +778,255 @@ char *get_panel_string(char *prompt)
 	return buf;
 }
 
-void rename_file(void)
+void quit(const Arg *arg)
+{
+	if (!strcmp(last_d, "")) {
+		strcpy(last_d, getenv("CCC_LAST_D"));
+		if (!strcmp(last_d, "")) {
+			wpprintw("$CCC_LAST_D not defined (Press any key to continue)");
+			/* prompt user so error message can be shown to user */
+			readch();
+		}
+	} else {
+		if (last_d[0] == '~')
+			replace_home(last_d);
+
+		char last_ddup[PATH_MAX];
+		strcpy(last_ddup, last_d);
+
+		char *last_d_dir = strrchr(last_ddup, '/');
+		if (last_d_dir) {
+			*last_d_dir = '\0'; /* truncate string */
+		}
+		mkdir_p(last_ddup);
+		FILE *last_d_file = fopen(last_d, "w");
+		if (!last_d_file) {
+			wpprintw("Cannot open last directory file (Press any key to continue)");
+			readch();
+		}
+		fwrite(cwd, strlen(cwd), sizeof(char), last_d_file);
+		fclose(last_d_file);
+	}
+	cleanup();
+	exit(0);
+}
+
+void reload(const Arg *arg)
+{
+	change_dir(cwd, 0, 0); 
+}
+
+void nav_back(const Arg *arg)
+{
+	char dir[PATH_MAX];
+	strcpy(dir, cwd);
+	/* get parent directory */
+	char *last_slash = strrchr(dir, '/');
+	if (last_slash) {
+		if (!strcmp(last_slash, dir)) {
+			change_dir("/", 0, 0);
+		} else {
+			*last_slash = '\0';
+			change_dir(dir, 0, 0);
+		}
+	}
+}
+
+void nav_enter(const Arg *arg)
+{
+	file c_file = files->items[sel_file];
+	/* Check if it is directory or a regular file */
+	if (c_file.type == DRY) {
+		/* Change cwd to directory */
+		change_dir(c_file.path, 0, 0); 
+	} else if (c_file.type == REG) {
+		/* Write opened file to a file for file pickers */
+		if (file_picker) {
+			char opened_file_path[PATH_MAX];
+			strcpy(opened_file_path, "~/.cache/ccc/opened_file");
+			replace_home(opened_file_path);
+			FILE *opened_file = fopen(opened_file_path, "w+");
+			fprintf(opened_file, "%s\n", c_file.path);
+			fclose(opened_file);
+			cleanup();
+			exit(0);
+		} else {
+			edit_file();
+		}
+	}
+}
+
+void nav_jump_up(const Arg *arg)
+{
+	if ((sel_file - jump_num) > 0)
+		sel_file -= jump_num;
+	else
+		sel_file = 0;
+}
+
+void nav_jump_down(const Arg *arg)
+{
+	if ((sel_file + jump_num) < (files->length - 1))
+		sel_file += jump_num;
+	else
+		sel_file = (files->length - 1);
+
+}
+
+void nav_up(const Arg *arg)
+{
+	if (sel_file > 0)
+		sel_file--;
+}
+
+void nav_down(const Arg *arg)
+{
+	if (sel_file < (files->length - 1))
+		sel_file++;
+}
+
+void nav_bottom(const Arg *arg)
+{
+	sel_file = (files->length - 1);
+}
+
+void nav_top(const Arg *arg)
+{
+	sel_file = 0;
+}
+
+void goto_home_dir(const Arg *arg)
+{
+	char *home = getenv("HOME");
+	if (!home) {
+		wpprintw("$HOME not defined (Press any key to continue)");
+		readch();
+	} else {
+		change_dir(home, 0, 0);
+	}
+}
+
+void goto_trash_dir(const Arg *arg)
+{
+	char *trash_dir = check_trash_dir();
+	if (trash_dir) {
+		change_dir(trash_dir, 0, 0);
+		free(trash_dir);
+	}
+}
+
+void sort_files(const Arg *arg)
+{
+	qsort(files->items, files->length, sizeof(file), sort_compare);
+}
+
+void show_dir_size(const Arg *arg)
+{
+	dirs_size = !dirs_size;
+	change_dir(cwd, 0, 0);
+}
+
+void prev_dir(const Arg *arg)
+{
+	if (strlen(p_cwd) != 0)
+		change_dir(p_cwd, 0, 0);
+}
+
+void show_help(const Arg *arg)
+{
+	bprintf("\033[2J");
+	move_cursor(1, 1);
+	bprintf(
+		"h/left/backspace: go to parent dir\n"
+		"j/down: scroll down\n"
+		"k/up: scroll up\n"
+		"l/right/enter: go to child dir\n\n"
+		"o: open file with\n"
+		"O: open file with a GUI program detached from file manager\n\n"
+		"g: go to top\n"
+		"G: go to bottom\n\n"
+		"ctrl+u: jump up\n"
+		"ctrl+d: jump down\n\n"
+		"t: go to trash dir\n"
+		"~: go to home dir\n"
+		"-: go to previous dir\n"
+		"z: refresh current dir\n"
+		":: go to a directory by typing\n\n"
+		".: toggle hidden files\n"
+		"A: show directory disk usage/block size\n"
+		"i: toggle file details\n"
+		"u: sort files\n"
+		"x: view file/dir attributes\n"
+		"e: show history\n"
+		"y: copy filename to clipboard\n"
+		"!: open shell in current dir\n\n"
+		"f: new file\n"
+		"n: new dir\n"
+		"r: rename\n"
+		"X: toggle executable\n\n"
+		"space: mark file\n"
+		"a: mark all files in directory\n"
+		"d: trash\n\n"
+		"[1-9]: favourites/bookmarks (see customizing)\n\n"
+		"?: show help\n"
+		"q: exit with last dir written to file\n"
+		"ctrl+c exit without writing last dir\n"
+	);
+	wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
+	readch();
+}
+
+void toggle_hidden_files(const Arg *arg)
+{
+	show_hidden = !show_hidden;
+	change_dir(cwd, 0, 0);
+}
+
+void toggle_file_details(const Arg *arg)
+{
+	show_details = !show_details;
+	change_dir(cwd, 0, 0);
+}
+
+void toggle_show_icons(const Arg *arg)
+{
+	show_icons = !show_icons;
+	change_dir(cwd, 0, 0);
+}
+
+void create_file(const Arg *arg)
+{
+	char *input = get_panel_string("New file: ");
+	if (!input) {
+		return;
+	}
+	FILE *f = fopen(input, "w+");
+	fclose(f);
+	change_dir(cwd, 0, 0);
+	wpprintw("Created %s", input);
+	free(input);
+}
+
+void create_dir(const Arg *arg)
+{
+	char *input = get_panel_string("New dir: ");
+	if (!input) {
+		return;
+	}
+	char newfilename[PATH_MAX];
+	snprintf(newfilename, PATH_MAX, "%s/%s", cwd, input);
+
+	if (access(newfilename, F_OK) != 0) {
+		mkdir_p(newfilename);
+		change_dir(cwd, 0, 0);
+		wpprintw("Created %s", input);
+	} else {
+		wpprintw("Directory already exist");
+	}
+	free(input);
+}
+
+void rename_file(const Arg *arg)
 {
 	char *filename = files->items[sel_file].path;
 	char *input = get_panel_string("Rename file: ");
@@ -1192,7 +1051,7 @@ void rename_file(void)
 	free(input);
 }
 
-void goto_dir(void)
+void goto_dir(const Arg *arg)
 {
 	char *input = get_panel_string("Goto dir: ");
 	if (!input) {
@@ -1214,61 +1073,26 @@ void goto_dir(void)
 	free(input);
 }
 
-void create_dir(void)
+void toggle_executable(const Arg *arg)
 {
-	char *input = get_panel_string("New dir: ");
-	if (!input) {
+	file f = files->items[sel_file];
+	struct stat st;
+	if (stat(f.path, &st) == -1) {
+		wpprintw("stat failed: %s (Press any key to continue)", strerror(errno));
+		readch();
 		return;
 	}
-	char newfilename[PATH_MAX];
-	snprintf(newfilename, PATH_MAX, "%s/%s", cwd, input);
-
-	if (access(newfilename, F_OK) != 0) {
-		mkdir_p(newfilename);
-		change_dir(cwd, 0, 0);
-		wpprintw("Created %s", input);
-	} else {
-		wpprintw("Directory already exist");
-	}
-	free(input);
-}
-
-void create_file(void)
-{
-	char *input = get_panel_string("New file: ");
-	if (!input) {
+	if (f.type == DRY)
 		return;
+	/* chmod by xor executable bits */
+	if (chmod(f.path, st.st_mode ^ (S_IXUSR | S_IXGRP | S_IXOTH)) == -1) {
+		wpprintw("Error toggling executable: %s (Press any key to continue)", strerror(errno));
+		readch();
 	}
-	FILE *f = fopen(input, "w+");
-	fclose(f);
 	change_dir(cwd, 0, 0);
-	wpprintw("Created %s", input);
-	free(input);
 }
 
-void delete_files(void)
-{
-	if (marked->length) {
-		char *trash_dir = check_trash_dir();
-		if (trash_dir) {
-			for (int i = 0; i < marked->length; i++) {
-				char new_path[PATH_MAX];
-				snprintf(new_path, PATH_MAX, "%s/%s", trash_dir, marked->items[i].name);
-				if (rename(marked->items[i].path, new_path)) {
-					wpprintw("delete failed: %s", strerror(errno));
-				}
-			}
-			change_dir(cwd, 0, 0);
-			for (int i = 0; i < marked->length; i++) {
-				arraylist_remove(marked, 0);
-			}
-		} else {
-			wpprintw("TODO: implement hard delete");
-		}
-	}
-}
-
-void start_shell(void)
+void start_shell(const Arg *arg)
 {
 	bprintf("\033[2J\033[?25h");
 	move_cursor(1, 1);
@@ -1294,7 +1118,7 @@ void start_shell(void)
 	}
 }
 
-void yank_clipboard(void)
+void yank_clipboard(const Arg *arg)
 {
 	pid_t pid = fork();
 	if (pid == 0) {
@@ -1311,45 +1135,7 @@ void yank_clipboard(void)
 	}
 }
 
-void view_file_attr(void)
-{
-	bprintf("\033[2J");
-	move_cursor(1, 1);
-	pid_t pid = fork();
-	if (pid == 0) {
-		/* Child process */
-		execlp("stat", "stat", files->items[sel_file].name, NULL);
-		_exit(1); /* Exit if exec fails */
-	} else if (pid > 0) {
-		/* Parent process */
-		waitpid(pid, NULL, 0);
-	} else {
-		/* Fork failed */
-		wpprintw("fork failed: %s", strerror(errno));
-	}
-	readch();
-}
-
-void show_history(void)
-{
-	bprintf("\033[2J");
-	move_cursor(1, 1);
-	char history_path[PATH_MAX];
-	strcpy(history_path, "~/.cache/ccc/history");
-	replace_home(history_path);
-	FILE *history_file = fopen(history_path, "r");
-	char buffer[PATH_MAX];
-	int row = 1;
-	while (fgets(buffer, sizeof(buffer), history_file) && row <= rows - 1) {
-		move_cursor(row++, 1);
-		bprintf(buffer);
-
-	}
-	fclose(history_file);
-	readch();
-}
-
-void open_with(void)
+void open_with(const Arg *arg)
 {
 	char *input = get_panel_string("open with: ");
 	if (!input) {
@@ -1379,7 +1165,7 @@ void open_with(void)
 	}
 }
 
-void open_detached(void)
+void open_detached(const Arg *arg)
 {
 	char *input = get_panel_string("open with (detached): ");
 	if (!input) {
@@ -1408,6 +1194,111 @@ void open_detached(void)
 		/* Fork failed */
 		wpprintw("fork failed: %s", strerror(errno));
 	}
+}
+
+void view_file_attr(const Arg *arg)
+{
+	bprintf("\033[2J");
+	move_cursor(1, 1);
+	pid_t pid = fork();
+	if (pid == 0) {
+		/* Child process */
+		execlp("stat", "stat", files->items[sel_file].name, NULL);
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
+	}
+	readch();
+}
+
+void show_history(const Arg *arg)
+{
+	bprintf("\033[2J");
+	move_cursor(1, 1);
+	char history_path[PATH_MAX];
+	strcpy(history_path, "~/.cache/ccc/history");
+	replace_home(history_path);
+	FILE *history_file = fopen(history_path, "r");
+	char buffer[PATH_MAX];
+	int row = 1;
+	while (fgets(buffer, sizeof(buffer), history_file) && row <= rows - 1) {
+		move_cursor(row++, 1);
+		bprintf(buffer);
+
+	}
+	fclose(history_file);
+	readch();
+}
+
+void open_fav(const Arg *arg)
+{
+	char envname[9];
+	FILE*f=fopen("/home/night/a", "a");
+	fprintf(f, "%d\n", arg->i);
+	fclose(f);
+	snprintf(envname, 9, "CCC_FAV%d", arg->i);
+	char *fav = getenv(envname);
+	if (fav && strcmp(fav, "")) {
+		char dir[PATH_MAX];
+		strcpy(dir, fav);
+		change_dir(dir, 0, 0);
+	}
+}
+
+void mark_file(const Arg *arg)
+{
+	add_file_stat(files->items[sel_file].name, files->items[sel_file].path, 1);
+}
+
+void mark_all(const Arg *arg)
+{
+	change_dir(cwd, sel_file, 2); /* reload current dir */
+}
+
+void delete_files(const Arg *arg)
+{
+	if (marked->length) {
+		char *trash_dir = check_trash_dir();
+		if (trash_dir) {
+			for (int i = 0; i < marked->length; i++) {
+				char new_path[PATH_MAX];
+				snprintf(new_path, PATH_MAX, "%s/%s", trash_dir, marked->items[i].name);
+				if (rename(marked->items[i].path, new_path)) {
+					wpprintw("delete failed: %s", strerror(errno));
+				}
+			}
+			change_dir(cwd, 0, 0);
+			for (int i = 0; i < marked->length; i++) {
+				arraylist_remove(marked, 0);
+			}
+		} else {
+			wpprintw("TODO: implement hard delete");
+		}
+	}
+}
+
+void move_files(const Arg *arg)
+{
+
+}
+
+void copy_files(const Arg *arg)
+{
+
+}
+
+void symbolic_link(const Arg *arg)
+{
+
+}
+
+void bulk_rename(const Arg *arg)
+{
+
 }
 
 /*
