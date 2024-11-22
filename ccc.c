@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
 	getcwd(cwd, PATH_MAX);
 	populate_files(cwd, 0, &files);
-	handle_sigwinch(-1);
+	get_window_size(&rows, &cols);
 
 	if (to_open_file) {
 		sel_file = arraylist_search(files, argv_cp, 1);
@@ -215,6 +215,7 @@ void keybinding(void)
 void handle_sigwinch(int ignore)
 {
 	get_window_size(&rows, &cols);
+	list_files();
 }
 
 void cleanup(void)
