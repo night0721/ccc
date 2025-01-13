@@ -220,6 +220,7 @@ void handle_sigwinch(int ignore)
 
 void cleanup(void)
 {
+	hashtable_free();
 	if (files->length != 0) {
 		arraylist_free(files);
 	}
@@ -547,6 +548,7 @@ void show_file_content(void)
 			int color = files_visit->items[i].color;
 			move_cursor(i + 1, half_width);
 			bprintf("\033[K\033[%dm%s\033[m\n", color, line);
+			free(line);
 		}
 		arraylist_free(files_visit);
 		return;
@@ -565,6 +567,7 @@ void show_file_content(void)
 			return;
 		}
 	}
+	fclose(file);
 	int pipe_fd[2];
 	if (pipe(pipe_fd) == -1) {
 		perror("pipe");

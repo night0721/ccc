@@ -14,5 +14,6 @@ void hashtable_init(void);
 void hashtable_print(void);
 int hashtable_add(icon *p);
 icon *hashtable_search(char *name);
+void hashtable_free(void);
 
 #endif

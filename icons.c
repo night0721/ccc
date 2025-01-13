@@ -187,3 +187,9 @@ icon *hashtable_search(char *name)
     
     return NULL;
 }
+
+void hashtable_free(void)
+{
+	for (int i = 0; i < TABLE_SIZE; i++)
+        free(hash_table[i]);
+}
