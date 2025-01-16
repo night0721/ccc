@@ -105,25 +105,18 @@ char *get_line(ArrayList *list, long index, int detail, int icons)
 {
 	file f = list->items[index];
 
-	size_t length = strlen(f.name) + 1;
-	if (detail) {
-		length += strlen(f.stats) + 1; /* 1 for space */
-	}
-	if (icons) {
-		length += 5; /* 4 for icon, 1 for space */
-	}
+    size_t length = strlen(f.name) + 1;
+    length += detail ? strlen(f.stats) + 1 : 0;
+    length += icons ? strlen(f.icon) + 1 : 0;
 
-	char *line = memalloc(length);
-	line[0] = '\0';
-	if (detail) {
-		strcat(line, f.stats);
-		strcat(line, " ");
-	}
-	if (icons) {
-		strcat(line, f.icon);
-		strcat(line, " ");
-	}
-	strcat(line, f.name);
-	line[length] = '\0';
-	return line;
+    char *line = memalloc(length);
+
+    snprintf(line, length, "%s%s%s%s%s",
+             detail ? f.stats : "",
+             detail ? " " : "",
+             icons ? f.icon : "",
+             icons ? " " : "",
+             f.name);
+
+    return line;
 }
