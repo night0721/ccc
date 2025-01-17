@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 
 	while (1) {
 		list_files();
-		keybinding();	
+		keybinding();
 	}
 	return 0;
 }
@@ -537,6 +537,9 @@ void add_file_stat(char *filename, char *path, int ftype)
  */
 void show_file_content(void)
 {
+	if (sel_file >= files->length) {
+		return;
+	}
 	file current_file = files->items[sel_file];
 
 	move_cursor(1, half_width);
@@ -555,7 +558,8 @@ void show_file_content(void)
 	}
 	FILE *file = fopen(current_file.path, "r");
 	if (!file) {
-		bprintf("Unable to read %s", current_file.name);
+/* 		bprintf("Unable to read %s", current_file.name ? current_file.name : "unknown"); */
+		bprintf("Unable to read unknown");
 		return;
 	}
 
@@ -645,7 +649,7 @@ void list_files(void)
 	/* calculate range of files to show */
 	long range = files->length;
 	/* not highlight if no files in directory */
-	if (range == 0 && errno == 0) {
+	if (range == 0) {
 		for (int i = 0; i < rows - 1; i++) {
 			move_cursor(i + 1, 1);
 			bprintf("\033[K");
@@ -838,6 +842,9 @@ void nav_back(const Arg *arg)
 
 void nav_enter(const Arg *arg)
 {
+	if (sel_file >= files->length) {
+		return;
+	}
 	file c_file = files->items[sel_file];
 	/* Check if it is directory or a regular file */
 	if (c_file.type == DRY) {
