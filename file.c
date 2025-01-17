@@ -69,7 +69,7 @@ void arraylist_remove(ArrayList *list, long index)
 void arraylist_add(ArrayList *list, char *name, char *path, char *stats, int type, char *icon, int color, int marked, int force)
 {
 	file new_file = { name, path, type, stats, color };
-	strcpy(new_file.icon, icon);
+	strncpy(new_file.icon, icon, sizeof(new_file.icon) / sizeof(new_file.icon[0]));
 
 	if (list->capacity != list->length) {
 		if (marked) {
