@@ -409,9 +409,8 @@ void add_file_stat(char *filename, char *path, int ftype)
 {
 	struct stat file_stat;
 	if (stat(path, &file_stat) == -1) {
-		/* can't be triggered? */
-		if (errno == EACCES)
-			arraylist_add(files, filename, path, NULL, REG, NULL, DEF_COLOR, 0, 0);
+        perror("stat()");
+        return;
 	}
 
 	int type = 0;
@@ -547,8 +546,11 @@ void show_file_content(void)
 
 	move_cursor(1, half_width);
 	if (current_file.type == DRY) {
-		ArrayList *files_visit;
+		ArrayList *files_visit = NULL;
 		populate_files(current_file.name, 0, &files_visit);
+        if (!files_visit)
+            return;
+
 		for (long i = 0; i < files_visit->length && i < rows - 1; i++) {
 			char *line = get_line(files_visit, i, 0, show_icons);
 			int color = files_visit->items[i].color;
