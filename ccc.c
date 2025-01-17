@@ -414,8 +414,8 @@ void add_file_stat(char *filename, char *path, int ftype)
 			arraylist_add(files, filename, path, NULL, REG, NULL, DEF_COLOR, 0, 0);
 	}
 
-	int type;
-	char icon_str[5];
+	int type = 0;
+	char icon_str[8] = {0};
 
 	filename[strlen(filename)] = '\0';
 	/* handle file without extension
@@ -427,17 +427,20 @@ void add_file_stat(char *filename, char *path, int ftype)
 	}
 	/* add file extension */
 	icon *ext_icon = hashtable_search(ext ? ext : filename);
-	if (!ext_icon)
-		memcpy(icon_str, "", 4);
-	else 
-		memcpy(icon_str, ext_icon->icon, 4);
+	if (!ext_icon) {
+		char ch[] = "";
+		memcpy(icon_str, ch, sizeof(ch));
+	} else {
+		strncpy(icon_str, ext_icon->icon, sizeof(icon_str));
+	}
 
 	int color = DEF_COLOR;
 
 	if (S_ISDIR(file_stat.st_mode)) {
 		type = DRY; /* dir */
 		color = DIR_COLOR;
-		memcpy(icon_str, "󰉋", 4);
+		char ch[] = "󰉋";
+		memcpy(icon_str, ch, sizeof(ch));
 	} else if (S_ISREG(file_stat.st_mode)) {
 		type = REG; /* regular file */
 		color = REG_COLOR;

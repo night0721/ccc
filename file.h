@@ -19,7 +19,7 @@ typedef struct {
 	int type;
 	char *stats;
 	int color;
-	char icon[5];
+	char icon[8];
 } file;
 
 typedef struct {
