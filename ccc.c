@@ -1429,12 +1429,8 @@ int get_window_size(int *row, int *col)
  */
 void bprintf(const char *fmt, ...)
 {
-	char buffer[1024];
 	va_list args;
-
-	va_start(args, fmt);
-	vsnprintf(buffer, sizeof(buffer), fmt, args);
-	va_end(args);
-
-	write(STDOUT_FILENO, buffer, strlen(buffer));
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
 }
