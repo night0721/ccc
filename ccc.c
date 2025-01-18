@@ -409,13 +409,12 @@ void add_file_stat(char *filename, char *path, int ftype)
 {
 	struct stat file_stat;
 	if (stat(path, &file_stat) == -1) {
-		/* can't be triggered? */
-		if (errno == EACCES)
-			arraylist_add(files, filename, path, NULL, REG, NULL, DEF_COLOR, 0, 0);
+        perror("stat()");
+        return;
 	}
 
-	int type;
-	char icon_str[5];
+	int type = 0;
+	char icon_str[8] = {0};
 
 	filename[strlen(filename)] = '\0';
 	/* handle file without extension
@@ -427,17 +426,20 @@ void add_file_stat(char *filename, char *path, int ftype)
 	}
 	/* add file extension */
 	icon *ext_icon = hashtable_search(ext ? ext : filename);
-	if (!ext_icon)
-		memcpy(icon_str, "", 4);
-	else 
-		memcpy(icon_str, ext_icon->icon, 4);
+	if (!ext_icon) {
+		char ch[] = "";
+		memcpy(icon_str, ch, sizeof(ch));
+	} else {
+		strncpy(icon_str, ext_icon->icon, sizeof(icon_str));
+	}
 
 	int color = DEF_COLOR;
 
 	if (S_ISDIR(file_stat.st_mode)) {
 		type = DRY; /* dir */
 		color = DIR_COLOR;
-		memcpy(icon_str, "󰉋", 4);
+		char ch[] = "󰉋";
+		memcpy(icon_str, ch, sizeof(ch));
 	} else if (S_ISREG(file_stat.st_mode)) {
 		type = REG; /* regular file */
 		color = REG_COLOR;
@@ -544,8 +546,11 @@ void show_file_content(void)
 
 	move_cursor(1, half_width);
 	if (current_file.type == DRY) {
-		ArrayList *files_visit;
+		ArrayList *files_visit = NULL;
 		populate_files(current_file.name, 0, &files_visit);
+        if (!files_visit)
+            return;
+
 		for (long i = 0; i < files_visit->length && i < rows - 1; i++) {
 			char *line = get_line(files_visit, i, 0, show_icons);
 			int color = files_visit->items[i].color;
