@@ -101,7 +101,6 @@ void wpprintw(const char *fmt, ...);
 void move_cursor(int row, int col);
 int readch(void);
 int get_window_size(int *row, int *col);
-void bprintf(const char *fmt, ...);
 
 /* global variables */
 long sel_file = 0;
@@ -170,7 +169,7 @@ int main(int argc, char **argv)
 	/* initialize screen, don't print special chars,
 	 * make ctrl + c work, don't show cursor 
 	 * enable arrow keys */
-	bprintf("\033[?1049h\033[2J\033[?25l");
+	printf("\033[?1049h\033[2J\033[?25l");
 	tcgetattr(STDIN_FILENO, &oldt);
 	newt = oldt;
 	/* Disable canonical mode and echo */
@@ -228,7 +227,7 @@ void cleanup(void)
 	free(marked);
 	/* Restore old terminal settings */
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt);
-	bprintf("\033[2J\033[?1049l\033[?25h");
+	printf("\033[2J\033[?1049l\033[?25h");
 }
 
 void replace_home(char *str)
@@ -555,7 +554,7 @@ void show_file_content(void)
 			char *line = get_line(files_visit, i, 0, show_icons);
 			int color = files_visit->items[i].color;
 			move_cursor(i + 1, half_width);
-			bprintf("\033[K\033[%dm%s\033[m\n", color, line);
+			printf("\033[K\033[%dm%s\033[m\n", color, line);
 			free(line);
 		}
 		arraylist_free(files_visit);
@@ -563,8 +562,8 @@ void show_file_content(void)
 	}
 	FILE *file = fopen(current_file.path, "r");
 	if (!file) {
-/* 		bprintf("Unable to read %s", current_file.name ? current_file.name : "unknown"); */
-		bprintf("Unable to read unknown");
+/* 		printf("Unable to read %s", current_file.name ? current_file.name : "unknown"); */
+		printf("Unable to read unknown");
 		return;
 	}
 
@@ -572,7 +571,7 @@ void show_file_content(void)
 	/* Check if its binary */
 	while ((c = fgetc(file)) != EOF) {
 		if (c == '\0') {
-			bprintf("binary");
+			printf("binary");
 			return;
 		}
 	}
@@ -602,7 +601,7 @@ void show_file_content(void)
 			size_t buflen = strlen(buffer);
 			if (buffer[0] == '\0' || strspn(buffer, " \t") == buflen) {
 				move_cursor(row++, half_width);
-				bprintf("\n");
+				printf("\n");
 				continue;
 			}
 			move_cursor(row++, half_width);
@@ -620,16 +619,16 @@ void show_file_content(void)
 						if (length < sizeof(ansiseq)) {
 							strncpy(ansiseq, buffer + start, length);
 							ansiseq[length] = '\0';
-							bprintf("%s", ansiseq);
+							printf("%s", ansiseq);
 							/* Update the index to the character after the sequence */
 							i += length - 1;
 							continue;
 						}
 					} else {
-						bprintf("%c", buffer[i]);
+						printf("%c", buffer[i]);
 					}
 				} else {
-					bprintf("%c", buffer[i]);
+					printf("%c", buffer[i]);
 					len++;
 				}
 				if (len && (len) % (cols - half_width + 1) == 0) {
@@ -657,10 +656,10 @@ void list_files(void)
 	if (range == 0) {
 		for (int i = 0; i < rows - 1; i++) {
 			move_cursor(i + 1, 1);
-			bprintf("\033[K");
+			printf("\033[K");
 		}
 		move_cursor(1, half_width);
-		bprintf("empty directory");
+		printf("empty directory");
 		return;
 	}
 
@@ -677,7 +676,7 @@ void list_files(void)
 	}
 
 	move_cursor(1, 1);
-	bprintf("\033[2J");
+	printf("\033[2J");
 
 	int max_flen = 0;
 	for (long i = overflow; i < range; i++) {
@@ -709,7 +708,7 @@ void list_files(void)
 		int is_marked = arraylist_search(marked, files->items[i].path, 0) != -1;
 		move_cursor(i - overflow + 1, 1);
 		if (is_marked) color = MAR_COLOR;
-		bprintf("\033[30m\033[%dm%s\033[m\n",
+		printf("\033[30m\033[%dm%s\033[m\n",
 				is_selected ? color + 10 : color, line);
 
 		free(line);
@@ -755,7 +754,7 @@ char *get_panel_string(char *prompt)
 	char *buf = memalloc(bufsize);
 	size_t buflen = 0;
 	buf[0] = '\0';
-	bprintf("\033[?25h");
+	printf("\033[?25h");
 	while (1) {
 		wpprintw("%s%s", prompt, buf);
 		int c = readch();
@@ -766,12 +765,12 @@ char *get_panel_string(char *prompt)
 		} else if (c == '\033') {
 			wpprintw("");
 			free(buf);
-			bprintf("\033[?25l");
+			printf("\033[?25l");
 			return NULL;
 		} else if (c == '\r') {
 			wpprintw("");
 			if (buflen != 0) {
-				bprintf("\033[?25l");
+				printf("\033[?25l");
 				return buf;
 			}
 		} else if (!iscntrl(c) && c < 128) {
@@ -787,7 +786,7 @@ char *get_panel_string(char *prompt)
 	if (buf[0] == '~')
 		replace_home(buf);
 
-	bprintf("\033[?25l");
+	printf("\033[?25l");
 	return buf;
 }
 
@@ -950,9 +949,9 @@ void prev_dir(const Arg *arg)
 
 void show_help(const Arg *arg)
 {
-	bprintf("\033[2J");
+	printf("\033[2J");
 	move_cursor(1, 1);
-	bprintf(
+	printf(
 		"h/left/backspace: go to parent dir\n"
 		"j/down: scroll down\n"
 		"k/up: scroll up\n"
@@ -1110,7 +1109,7 @@ void toggle_executable(const Arg *arg)
 
 void start_shell(const Arg *arg)
 {
-	bprintf("\033[2J\033[?25h");
+	printf("\033[2J\033[?25h");
 	move_cursor(1, 1);
 	char shell[PATH_MAX];
 	char *shellenv = getenv("SHELL");
@@ -1127,7 +1126,7 @@ void start_shell(const Arg *arg)
 	} else if (pid > 0) {
 		/* Parent process */
 		waitpid(pid, NULL, 0);
-		bprintf("\033[?25l");
+		printf("\033[?25l");
 	} else {
 		/* Fork failed */
 		wpprintw("fork failed: %s", strerror(errno));
@@ -1144,7 +1143,7 @@ void yank_clipboard(const Arg *arg)
 	} else if (pid > 0) {
 		/* Parent process */
 		waitpid(pid, NULL, 0);
-		bprintf("\033[?25l");
+		printf("\033[?25l");
 	} else {
 		/* Fork failed */
 		wpprintw("fork failed: %s", strerror(errno));
@@ -1214,7 +1213,7 @@ void open_detached(const Arg *arg)
 
 void view_file_attr(const Arg *arg)
 {
-	bprintf("\033[2J");
+	printf("\033[2J");
 	move_cursor(1, 1);
 	pid_t pid = fork();
 	if (pid == 0) {
@@ -1233,7 +1232,7 @@ void view_file_attr(const Arg *arg)
 
 void show_history(const Arg *arg)
 {
-	bprintf("\033[2J");
+	printf("\033[2J");
 	move_cursor(1, 1);
 	char history_path[PATH_MAX];
 	strcpy(history_path, "~/.cache/ccc/history");
@@ -1243,8 +1242,7 @@ void show_history(const Arg *arg)
 	int row = 1;
 	while (fgets(buffer, sizeof(buffer), history_file) && row <= rows - 1) {
 		move_cursor(row++, 1);
-		bprintf(buffer);
-
+		printf("%s", buffer);
 	}
 	fclose(history_file);
 	readch();
@@ -1328,12 +1326,12 @@ void wpprintw(const char *fmt, ...)
 
 	move_cursor(rows, 1);
 	/* Clear line and print formatted string */
-	bprintf("\033[K%s", buffer);
+	printf("\033[K%s", buffer);
 }
 
 void move_cursor(int row, int col)
 {
-	bprintf("\033[%d;%dH", row, col);
+	printf("\033[%d;%dH", row, col);
 }
 
 int readch(void)
@@ -1395,7 +1393,7 @@ int get_cursor_position(int *rows, int *cols)
 {
 	char buf[32];
 	unsigned int i = 0;
-	bprintf("\033[6n");
+	printf("\033[6n");
 	while (i < sizeof(buf) - 1) {
 		if (read(STDIN_FILENO, &buf[i], 1) != 1) {
 			break;
@@ -1420,22 +1418,11 @@ int get_window_size(int *row, int *col)
 	struct winsize ws;
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
 		/* Can't get window size */
-		bprintf("\033[999C\033[999B");
+		printf("\033[999C\033[999B");
 		return get_cursor_position(row, col);
 	} else {
 		*col = ws.ws_col;
 		*row = ws.ws_row;
 		return 0;
 	}
-}
-
-/*
- * printf, but write to STDOUT_FILENO
- */
-void bprintf(const char *fmt, ...)
-{
-	va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
 }
