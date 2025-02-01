@@ -16,7 +16,7 @@ OBJS = $(SRC:.c=.o)
 	$(CC) -o $@ $(CFLAGS) -c $<
 
 $(TARGET): $(OBJS) config.h
-	$(CC) -o $@ $(OBJS) $(LIBS)
+	$(CC) -o $@ $(OBJS)
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)
