@@ -12,14 +12,14 @@ Consider this project incomplete and WIP!
 | Advanced movement (jumps)      |   X    |         |
 | File details                   |   X    |         |
 | File icons!                    |   X    |         |
-| Searching for files            |        |         |
+| Searching for files            |        |    X    |
 | Sorting                        |   X    |         |
-| Marking and marking operations |        |         |
+| Marking and marking operations |   X    |         |
 | Image previews                 |   X    |         |
 | Help                           |   X    |         |
-| History                        |        |         |
-| Bookmarks                      |        |         |
-| Bulk rename                    |        |         |
+| History                        |   X    |         |
+| Bookmarks                      |   X    |         |
+| Bulk rename                    |   X    |         |
 
 ## Features added that are not in fff:
 - File preview

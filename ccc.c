@@ -1294,22 +1294,138 @@ void delete_files(const Arg *arg)
 
 void move_files(const Arg *arg)
 {
+	if (marked->length) {
+		char *input = get_panel_string("Move to: ");
+		if (!input) {
+			return;
+		}
+		for (int i = 0; i < marked->length; i++) {
+			char new_path[PATH_MAX];
+			snprintf(new_path, PATH_MAX, "%s/%s", input, marked->items[i].name);
+			if (rename(marked->items[i].path, new_path)) {
+				wpprintw("move failed: %s", strerror(errno));
+			}
+		}
+		change_dir(cwd, 0, 0);
+		for (int i = 0; i < marked->length; i++) {
+			arraylist_remove(marked, 0);
+		}
+		free(input);
+	}
+}
 
+int copy_file(const char *src, const char *dest)
+{
+	int src_fd = open(src, O_RDONLY);
+	if (src_fd == -1) {
+		return 1;
+	}
+	int dest_fd = open(dest, O_WRONLY | O_CREAT, 0644);
+	if (dest_fd == -1) {
+		close(src_fd);
+		return 1;
+	}
+	char buffer[4096];
+	ssize_t bytes;
+	while ((bytes = read(src_fd, buffer, sizeof(buffer))) > 0) {
+		if (write(dest_fd, buffer, bytes) != bytes) {
+			close(src_fd);
+			close(dest_fd);
+			return 1;
+		}
+	}
+	close(src_fd);
+	close(dest_fd);
+	return 0;
 }
 
 void copy_files(const Arg *arg)
 {
-
+	if (marked->length) {
+		char *input = get_panel_string("Copy to: ");
+		if (!input) {
+			return;
+		}
+		for (int i = 0; i < marked->length; i++) {
+			char new_path[PATH_MAX];
+			snprintf(new_path, PATH_MAX, "%s/%s", input, marked->items[i].name);
+			if (copy_file(marked->items[i].path, new_path)) {
+				wpprintw("copy failed: %s", strerror(errno));
+			}
+		}
+		change_dir(cwd, 0, 0);
+		free(input);
+	}
 }
 
 void symbolic_link(const Arg *arg)
 {
-
+	if (marked->length) {
+		char *input = get_panel_string("Link to: ");
+		if (!input) {
+			return;
+		}
+		for (int i = 0; i < marked->length; i++) {
+			if (symlink(marked->items[i].path, input)) {
+				wpprintw("link failed: %s", strerror(errno));
+			}
+		}
+		change_dir(cwd, 0, 0);
+		free(input);
+	}
 }
 
 void bulk_rename(const Arg *arg)
 {
+	if (!marked->length) {
+		return;
+	}
+	/*
+	 *  # Bulk rename files using '$EDITOR'.
+	*/
+	char rename_file[PATH_MAX];
+	strcpy(rename_file, "~/.cache/ccc/bulk_rename");
+	replace_home(rename_file);
+	FILE *marked_files = fopen(rename_file, "w");
+	if (!marked_files) {
+		wpprintw("Cannot open rename file (Press any key to continue)");
+		readch();
+		return;
+	}
+	for (int i = 0; i < marked->length; i++) {
+		fprintf(marked_files, "%s\n", marked->items[i].path);
+	}
+	fclose(marked_files);
+	pid_t pid = fork();
 
+	if (pid == 0) {
+		/* Child process */
+		execlp(editor, editor, rename_file, NULL);
+		_exit(1); /* Exit if exec fails */
+	} else if (pid > 0) {
+		/* Parent process */
+		waitpid(pid, NULL, 0);
+	} else {
+		/* Fork failed */
+		wpprintw("fork failed: %s", strerror(errno));
+	}
+
+	FILE *rename_file_fp = fopen(rename_file, "r");
+	if (!rename_file_fp) {
+		wpprintw("Cannot open rename file (Press any key to continue)");
+		readch();
+		return;
+	}
+	char buffer[PATH_MAX];
+	while (fgets(buffer, sizeof(buffer), rename_file_fp)) {
+		buffer[strcspn(buffer, "\n")] = 0;
+		char new_path[PATH_MAX];
+		snprintf(new_path, PATH_MAX, "%s", buffer);
+		if (rename(buffer, new_path)) {
+			wpprintw("rename failed: %s", strerror(errno));
+		}
+	}
+	fclose(rename_file_fp);
 }
 
 /*
