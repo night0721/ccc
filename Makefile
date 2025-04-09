@@ -9,7 +9,7 @@ MANDIR = $(PREFIX)/share/man/man1
 
 CFLAGS += -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
 
-SRC = ccc.c util.c file.c icons.c
+SRC != find . -name "*.c"
 OBJS = $(SRC:.c=.o)
 
 .c.o:
@@ -22,7 +22,7 @@ dist:
 	mkdir -p $(TARGET)-$(VERSION)
 	cp -R README.md $(MANPAGE) $(TARGET) $(TARGET)-$(VERSION)
 	tar -czf $(TARGET)-$(VERSION).tar.gz $(TARGET)-$(VERSION)
-	rm -rf $(TARGET)-$(VERSION)
+	$(RM) -r $(TARGET)-$(VERSION)
 
 install: $(TARGET)
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -33,11 +33,11 @@ install: $(TARGET)
 	chmod 644 $(DESTDIR)$(MANDIR)/$(MANPAGE)
 
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
-	rm -f $(DESTDIR)$(MANDIR)/$(MANPAGE)
+	$(RM) $(DESTDIR)$(BINDIR)/$(TARGET)
+	$(RM) $(DESTDIR)$(MANDIR)/$(MANPAGE)
 
 clean:
-	rm -f $(TARGET) *.o
+	$(RM) $(TARGET) *.o
 
 all: $(TARGET)
 
