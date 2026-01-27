@@ -87,17 +87,6 @@ p: execute paste/move/delete/bulk_rename
 
 ```
 
-# Dependencies
-- Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
-- libsixel (Optional)
-
-# Building
-You will need to run these with elevated privilages.
-```
-$ make 
-# make install
-```
-
 # Customizing
 ## CD on Exit for POSIX Shell
 ```sh
@@ -108,6 +97,7 @@ c() {
     cd "$(cat "${XDG_CACHE_HOME:=${HOME}/.cache}/ccc/.ccc_d")"
 }
 ```
+
 ## Environment variables
 ```sh
 export CCC_LAST_D=~/.cache/ccc/.ccc_d
@@ -121,8 +111,20 @@ export CCC_FAV7=
 export CCC_FAV8=
 export CCC_FAV9=
 ```
+
 ## Using `ccc` in neovim as a file picker
 See [ccc.nvim](https://github.com/night0721/ccc.nvim)
+
+# Dependencies
+- Any [Nerd Font](https://www.nerdfonts.com/) for file icons (optional, but turned on by default)
+- libsixel (Optional)
+
+# Building
+You will need to run these with elevated privilages.
+```
+$ make 
+# make install
+```
 
 # Contributions
 Contributions are welcomed, feel free to open a pull request.
