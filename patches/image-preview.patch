@@ -1,32 +1,45 @@
+From 38a03eb1fb94f5cdbd38347200ecfacd22e48e99 Mon Sep 17 00:00:00 2001
 From: night0721 <night@night0721.xyz>
-Date: Thu, 21 Nov 2024 12:04:40 +0000
+Date: Thu, 9 Jul 2026 01:25:31 +0100
 Subject: [PATCH] Image preview support with libsixel
 
 ---
- Makefile |  4 +++-
- ccc.c    | 17 +++++++++++++++++
- 2 files changed, 20 insertions(+), 1 deletion(-)
+ Makefile |  8 ++++++--
+ ccc.c    | 18 ++++++++++++++++++
+ 2 files changed, 24 insertions(+), 2 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 2d4cde2..b7d9f80 100644
+index 40b2c61..a080aab 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -8,7 +8,9 @@ PREFIX ?= /usr/local
+@@ -6,8 +6,12 @@ MANPAGE = $(TARGET).1
+ PREFIX ?= /usr/local
  BINDIR = $(PREFIX)/bin
  MANDIR = $(PREFIX)/share/man/man1
++PKG_CONFIG = pkg-config
  
--CFLAGS = -Os -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
-+LDFLAGS != pkg-config --libs libsixel
-+INCFLAGS != pkg-config --cflags libsixel
-+CFLAGS = -Os -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 $(INCFLAGS)
+-CFLAGS += -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
++PKGS = libsixel
++LIBS != $(PKG_CONFIG) --libs $(PKGS)
++INCS != $(PKG_CONFIG) --cflags $(PKGS)
++CFLAGS += -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 $(INCS)
  
- SRC = ccc.c util.c file.c icons.c
+ SRC != find . -name "*.c"
+ OBJS = $(SRC:.c=.o)
+@@ -16,7 +20,7 @@ OBJS = $(SRC:.c=.o)
+ 	$(CC) -o $@ $(CFLAGS) -c $<
  
+ $(TARGET): $(OBJS) config.h
+-	$(CC) -o $@ $(OBJS)
++	$(CC) -o $@ $(LIBS) $(OBJS)
+ 
+ dist:
+ 	mkdir -p $(TARGET)-$(VERSION)
 diff --git a/ccc.c b/ccc.c
-index c3df5ff..2e3cc14 100644
+index 8794cd2..c188cd8 100644
 --- a/ccc.c
 +++ b/ccc.c
-@@ -13,6 +13,8 @@
+@@ -14,6 +14,8 @@
  #include <termios.h>
  #include <time.h>
  
@@ -35,41 +48,42 @@ index c3df5ff..2e3cc14 100644
  #include "icons.h"
  #include "file.h"
  #include "util.h"
-@@ -921,12 +923,14 @@ void show_file_content(void)
+@@ -570,12 +572,14 @@ void show_file_content(void)
  
  	int c;
  	/* Check if its binary */
 +	if (strstr(current_file.name, ".jpg") == NULL && strstr(current_file.name, ".png") == NULL) {
  	while ((c = fgetc(file)) != EOF) {
  		if (c == '\0') {
- 			bprintf("binary");
+ 			printf("binary");
  			return;
  		}
  	}
 +	}
+ 	fclose(file);
  	int pipe_fd[2];
  	if (pipe(pipe_fd) == -1) {
- 		perror("pipe");
-@@ -936,14 +940,26 @@ void show_file_content(void)
+@@ -585,14 +589,27 @@ void show_file_content(void)
+ 	int pid = fork();
  	if (pid == 0) {
  		/* Child */
- 		move_cursor(1, half_width);
-+		if (strstr(current_file.name, ".jpg") || strstr(current_file.name, ".png")) {
-+			sixel_encoder_t *encoder = NULL;
-+			sixel_encoder_new(&encoder, NULL);
-+			/* Should be enough for most terminal */
-+			char width[5];
-+			snprintf(width, 5, "%d", (cols - half_width) * 6);
-+			sixel_encoder_setopt(encoder, 'w', width);
-+			sixel_encoder_encode(encoder, current_file.name);
-+			sixel_encoder_unref(encoder);
-+		} else {
++		move_cursor(1, half_width);
++	if (strstr(current_file.name, ".jpg") || strstr(current_file.name, ".png")) {
++		sixel_encoder_t *encoder = NULL;
++		sixel_encoder_new(&encoder, NULL);
++		/* Should be enough for most terminal */
++		char width[5];
++		snprintf(width, 5, "%d", (cols - half_width) * 6);
++		sixel_encoder_setopt(encoder, 'w', width);
++		sixel_encoder_encode(encoder, current_file.name);
++		sixel_encoder_unref(encoder);
++	} else {
  		close(pipe_fd[0]);
  		dup2(pipe_fd[1], STDOUT_FILENO);
  		dup2(pipe_fd[1], STDERR_FILENO);
  		close(pipe_fd[1]);
  		execlp("vip", "vip", "-c", current_file.name, NULL);
-+		}
++	}
  		_exit(1);
  	} else if (pid > 0) {
  		/* Parent */
@@ -77,12 +91,14 @@ index c3df5ff..2e3cc14 100644
  		close(pipe_fd[1]);
  		char buffer[4096];
  		int row = 1;
-@@ -988,6 +1004,7 @@ void show_file_content(void)
+@@ -640,6 +657,7 @@ void show_file_content(void)
  			}
  		}
  		fclose(stream);
-+		}
++}
  		waitpid(pid, NULL, 0);
  	} else {
  		wpprintw("fork failed: %s", strerror(errno));
 -- 
+2.54.0
+
