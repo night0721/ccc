@@ -409,8 +409,8 @@ void add_file_stat(char *filename, char *path, int ftype)
 {
 	struct stat file_stat;
 	if (stat(path, &file_stat) == -1) {
-        perror("stat()");
-        return;
+		perror("stat()");
+		return;
 	}
 
 	int type = 0;
@@ -548,8 +548,8 @@ void show_file_content(void)
 	if (current_file.type == DRY) {
 		ArrayList *files_visit = NULL;
 		populate_files(current_file.name, 0, &files_visit);
-        if (!files_visit)
-            return;
+		if (!files_visit)
+			return;
 
 		for (long i = 0; i < files_visit->length && i < rows - 1; i++) {
 			char *line = get_line(files_visit, i, 0, show_icons);
@@ -563,20 +563,25 @@ void show_file_content(void)
 	}
 	FILE *file = fopen(current_file.path, "r");
 	if (!file) {
-/* 		printf("Unable to read %s", current_file.name ? current_file.name : "unknown"); */
+		/* 		printf("Unable to read %s", current_file.name ? current_file.name : "unknown"); */
 		printf("Unable to read unknown");
 		return;
 	}
 
 	int c;
+	long checked = 0;
+	const long BINARY_CHECK_LIMIT = 8192; /* only check first 8KB */
 	/* Check if its binary */
-	while ((c = fgetc(file)) != EOF) {
+	while (checked < BINARY_CHECK_LIMIT && (c = fgetc(file)) != EOF) {
 		if (c == '\0') {
+			fclose(file);
 			printf("binary");
 			return;
 		}
+		checked++;
 	}
 	fclose(file);
+
 	int pipe_fd[2];
 	if (pipe(pipe_fd) == -1) {
 		perror("pipe");
@@ -606,35 +611,56 @@ void show_file_content(void)
 				continue;
 			}
 			move_cursor(row++, half_width);
-			/* Visible length */
 			size_t len = 0;
-			for (size_t i = 0; i < buflen; i++) {
-				if (buffer[i] == '\033' && buffer[i + 1] == '[') {
-					char *end = strpbrk(buffer + i, "ABCDEFGHJKfhlmus");
-					if (end) {
-						char ansiseq[128];
-						int start = i;
-						/* Find the last 'm' after the escape character */
-						int length = end - (buffer + start) + 1;
-						/* Ensure it fits within the buffer */
-						if (length < sizeof(ansiseq)) {
-							strncpy(ansiseq, buffer + start, length);
-							ansiseq[length] = '\0';
-							printf("%s", ansiseq);
-							/* Update the index to the character after the sequence */
-							i += length - 1;
-							continue;
+			size_t i = 0;
+
+			/* tracks last-seen SGR sequence */
+			char current_sgr[32] = "\033[0m";
+
+			while (i < buflen) {
+				unsigned char b = buffer[i];
+
+				/* CSI escape sequence: ESC '[' params... final-byte */
+				if (b == '\033' && buffer[i + 1] == '[') {
+					size_t start = i;
+					i += 2; /* skip ESC [ */
+					/* consume parameter/intermediate bytes: 0x20-0x3F */
+					while (i < buflen && buffer[i] >= 0x20 && buffer[i] <= 0x3F)
+						i++;
+					/* consume the final byte: 0x40-0x7E */
+					if (i < buflen && buffer[i] >= 0x40 && buffer[i] <= 0x7E) {
+						/* remember it if it's an SGR sequence (ends in 'm') */
+						if (buffer[i] == 'm') {
+							size_t seqlen = i + 1 - start;
+							if (seqlen < sizeof(current_sgr)) {
+								memcpy(current_sgr, buffer + start, seqlen);
+								current_sgr[seqlen] = '\0';
+							}
 						}
-					} else {
-						printf("%c", buffer[i]);
+						i++;
 					}
-				} else {
-					printf("%c", buffer[i]);
-					len++;
+					fwrite(buffer + start, 1, i - start, stdout);
+					continue; /* zero visible width, don't touch len */
 				}
-				if (len && (len) % (cols - half_width + 1) == 0) {
+
+				/* UTF-8 multi-byte sequence: count as ONE visible column */
+				size_t charlen = 1;
+				if ((b & 0x80) == 0x00) charlen = 1;      /* ASCII */
+				else if ((b & 0xE0) == 0xC0) charlen = 2; /* 2-byte */
+				else if ((b & 0xF0) == 0xE0) charlen = 3; /* 3-byte */
+				else if ((b & 0xF8) == 0xF0) charlen = 4; /* 4-byte */
+
+				if (i + charlen > buflen) charlen = 1; /* truncated at buffer edge, don't overread */
+
+				fwrite(buffer + i, 1, charlen, stdout);
+				i += charlen;
+				len++; /* ONE visible column per codepoint, not per byte */
+
+				if (len && len % (cols - half_width + 1) == 0) {
 					if (row + 1 < rows) {
+						printf("\033[0m");        /* reset before breaking */
 						move_cursor(row++, half_width);
+						printf("%s", current_sgr); /* reapply active color */
 					}
 				}
 			}
@@ -953,41 +979,41 @@ void show_help(const Arg *arg)
 	printf("\033[2J");
 	move_cursor(1, 1);
 	printf(
-		"h/left/backspace: go to parent dir\n"
-		"j/down: scroll down\n"
-		"k/up: scroll up\n"
-		"l/right/enter: go to child dir\n\n"
-		"o: open file with\n"
-		"O: open file with a GUI program detached from file manager\n\n"
-		"g: go to top\n"
-		"G: go to bottom\n\n"
-		"ctrl+u: jump up\n"
-		"ctrl+d: jump down\n\n"
-		"t: go to trash dir\n"
-		"~: go to home dir\n"
-		"-: go to previous dir\n"
-		"z: refresh current dir\n"
-		":: go to a directory by typing\n\n"
-		".: toggle hidden files\n"
-		"A: show directory disk usage/block size\n"
-		"i: toggle file details\n"
-		"u: sort files\n"
-		"x: view file/dir attributes\n"
-		"e: show history\n"
-		"y: copy filename to clipboard\n"
-		"!: open shell in current dir\n\n"
-		"f: new file\n"
-		"n: new dir\n"
-		"r: rename\n"
-		"X: toggle executable\n\n"
-		"space: mark file\n"
-		"a: mark all files in directory\n"
-		"d: trash\n\n"
-		"[1-9]: favourites/bookmarks (see customizing)\n\n"
-		"?: show help\n"
-		"q: exit with last dir written to file\n"
-		"ctrl+c exit without writing last dir\n"
-	);
+			"h/left/backspace: go to parent dir\n"
+			"j/down: scroll down\n"
+			"k/up: scroll up\n"
+			"l/right/enter: go to child dir\n\n"
+			"o: open file with\n"
+			"O: open file with a GUI program detached from file manager\n\n"
+			"g: go to top\n"
+			"G: go to bottom\n\n"
+			"ctrl+u: jump up\n"
+			"ctrl+d: jump down\n\n"
+			"t: go to trash dir\n"
+			"~: go to home dir\n"
+			"-: go to previous dir\n"
+			"z: refresh current dir\n"
+			":: go to a directory by typing\n\n"
+			".: toggle hidden files\n"
+			"A: show directory disk usage/block size\n"
+			"i: toggle file details\n"
+			"u: sort files\n"
+			"x: view file/dir attributes\n"
+			"e: show history\n"
+			"y: copy filename to clipboard\n"
+			"!: open shell in current dir\n\n"
+			"f: new file\n"
+			"n: new dir\n"
+			"r: rename\n"
+			"X: toggle executable\n\n"
+			"space: mark file\n"
+			"a: mark all files in directory\n"
+			"d: trash\n\n"
+			"[1-9]: favourites/bookmarks (see customizing)\n\n"
+			"?: show help\n"
+			"q: exit with last dir written to file\n"
+			"ctrl+c exit without writing last dir\n"
+			);
 	wpprintw("Visit https://github.com/night0721/ccc or use 'man ccc' for help");
 	readch();
 }
@@ -1383,7 +1409,7 @@ void bulk_rename(const Arg *arg)
 	}
 	/*
 	 *  # Bulk rename files using '$EDITOR'.
-	*/
+	 */
 	char rename_file[PATH_MAX];
 	strcpy(rename_file, "~/.cache/ccc/bulk_rename");
 	replace_home(rename_file);
